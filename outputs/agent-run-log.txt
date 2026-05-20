@@ -1,0 +1,87 @@
+═══════════════════════════════════════════════════════════════════════════════
+INTERVIEW INVITE AGENT — RUN LOG
+Ngày chạy: 20/05/2026 22:47-22:48 (GMT+7)
+═══════════════════════════════════════════════════════════════════════════════
+
+▶ Lệnh chạy:
+$ cd /Users/Ngoclinh/Desktop/Lark\ Bot
+$ .venv/bin/python interview_invite_agent.py
+
+▶ Output:
+2026-05-20 22:47:55,001 [INFO] interview-agent — === Interview Agent: bắt đầu quét ===
+2026-05-20 22:47:55,642 [INFO] interview-agent — HRM: 85 total → 1 ứng viên đủ điều kiện
+2026-05-20 22:47:55,643 [INFO] interview-agent — Xử lý: Linh Test (id=5953c667)
+2026-05-20 22:47:56,111 [INFO] interview-agent — Lark refresh token đã rotate, đã lưu lại .env
+2026-05-20 22:47:57,209 [INFO] interview-agent — ✉️  Lark mail [user_token] sent → ngoclinhk47u1@gmail.com (msg_id=OGQ4OWUyYmItMjIwMi00YTdjLWE5MGUtYzYzOWFhY2I5ZWRm)
+2026-05-20 22:47:57,929 [INFO] interview-agent — 💬 Lark IM sent
+2026-05-20 22:47:58,930 [INFO] interview-agent — 📅 Calendar event created: c38bea1f-f7bf-440e-942a-6e0e61da7921_0
+2026-05-20 22:47:58,931 [INFO] interview-agent — === Xong: 1 email mới đã gửi ===
+
+═══════════════════════════════════════════════════════════════════════════════
+KẾT QUẢ XÁC NHẬN
+═══════════════════════════════════════════════════════════════════════════════
+
+[1] Email gửi tới ứng viên — XÁC NHẬN ✅
+   From:    Phòng Tuyển dụng SEONGON <tuyendung@seongon.com>
+   To:      Linh Test <ngoclinhk47u1@gmail.com>
+   Subject: [SEONGON] Thư mời phỏng vấn vị trí CTO - Giám Đốc Công Nghệ
+   Body:    HTML thật, render đúng (đã fix bug base64)
+   Bằng chứng: outputs/email-received.png
+
+[2] Lark IM gửi cho HRM — XÁC NHẬN ✅
+   To:   Nguyễn Thị Ngọc Linh (oc_6818d2b1d43d009c86321f55f3224f7c)
+   Body: "✅ Đã gửi thư mời phỏng vấn
+          • Ứng viên: Linh Test
+          • Vị trí: CTO - Giám Đốc Công Nghệ
+          • Lịch PV: Thứ Năm, 21/05/2026 lúc 10:30
+          • Email: ngoclinhk47u1@gmail.com"
+
+[3] Lark Calendar event — XÁC NHẬN ✅
+   Summary:  PV | Linh Test — CTO - Giám Đốc Công Nghệ
+   Start:    21/05/2026 10:30 (Asia/Ho_Chi_Minh)
+   End:      21/05/2026 11:30
+   Event ID: c38bea1f-f7bf-440e-942a-6e0e61da7921_0
+
+[4] HRM dashboard cột "Đã gửi Email" — XÁC NHẬN ✅
+   Query: GET /api/candidates → filter Linh Test
+   Response: {
+     "Email mời PV - Trạng thái": "sent",
+     "Email mời PV - Gửi lúc":   "20/05/2026 22:47",
+     "Email mời PV - Lỗi":       ""
+   }
+   Bằng chứng: outputs/hrm-dashboard-da-gui-email.png
+
+═══════════════════════════════════════════════════════════════════════════════
+DEPLOYMENT STATUS
+═══════════════════════════════════════════════════════════════════════════════
+
+▶ Backend (Cloud Run):
+$ gcloud run deploy hrm-api --source . --region asia-southeast1
+   Service [hrm-api] revision [hrm-api-00054-dh8] is serving 100% traffic
+   URL: https://hrm-api-521103150103.asia-southeast1.run.app
+
+▶ Frontend (Cloudflare Pages):
+$ wrangler pages deploy . --project-name=ngoclinhhrm --branch=main
+   ✨ Uploaded 1 files (1 already uploaded) (1.65 sec)
+   ✨ Deployment complete!
+   URL: https://ngoclinhhrm.com/tuyen-dung/
+
+═══════════════════════════════════════════════════════════════════════════════
+3 BUG ĐÃ FIX TRONG SESSION (nếu Thầy muốn xem)
+═══════════════════════════════════════════════════════════════════════════════
+
+Bug 1 — Refresh token expire sau 1 lần dùng (code 20038)
+  Nguyên nhân: Lark rotate refresh_token mỗi lần dùng, code cũ chỉ đọc env mà
+               không lưu lại token mới → lần tới luôn 20038.
+  Fix:         interview_invite_agent.py:148-160 — auto save vào .env.
+
+Bug 2 — Lark Mail không nhận tenant_access_token (code 99991663)
+  Nguyên nhân: Lark Mail Send API yêu cầu user_access_token (OAuth), không
+               chấp nhận tenant token kể cả khi đã có scope.
+  Fix:         Add scope `mail:user_mailbox.message:send` → Create Version
+               1.3.5 → Admin approve → re-authorize OAuth.
+
+Bug 3 — Email body hiển thị base64 thay vì HTML
+  Nguyên nhân: Code base64 encode body_html trước khi gửi, nhưng Lark Mail API
+               KHÔNG decode base64 (khác Gmail API mà chúng tôi quen).
+  Fix:         interview_invite_agent.py:232 — bỏ base64.b64encode().

@@ -1,0 +1,504 @@
+diff --git a/backend/app.py b/backend/app.py
+index 17993ae..0d15b54 100644
+--- a/backend/app.py
++++ b/backend/app.py
+@@ -15,6 +15,7 @@ import drive_upload
+ import email_reader
+ import db
+ import lark_chat
++import lark_mail
+ import agent as hrm_agent
+ 
+ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+@@ -172,6 +173,55 @@ def delete_candidate_route(candidate_id):
+     return jsonify({"ok": True})
+ 
+ 
++@app.post("/api/candidates/<candidate_id>/send-invite-email")
++@require_api_key
++def send_invite_email_route(candidate_id):
++    """Gửi (hoặc gửi lại) email mời phỏng vấn cho ứng viên qua Lark Mail.
++    Body (optional): {force: bool} — bỏ qua check "đã gửi rồi".
++    """
++    c = db.get_candidate(candidate_id)
++    if not c:
++        return jsonify({"error": "Không tìm thấy ứng viên"}), 404
++
++    data = request.get_json(silent=True) or {}
++    force = bool(data.get("force"))
++
++    # Sanity check: ứng viên đủ điều kiện không?
++    if not (c.get("Email") or "").strip():
++        msg = "Ứng viên không có email"
++        db.update_candidate_fields(candidate_id, {
++            "email_invite_status": "failed",
++            "email_invite_sent_at": datetime.now().strftime("%d/%m/%Y %H:%M"),
++            "email_invite_error": msg,
++        })
++        return jsonify({"ok": False, "error": msg}), 400
++
++    if not force and c.get("Email mời PV - Trạng thái") == "sent":
++        return jsonify({
++            "ok": True,
++            "status": "sent",
++            "sent_at": c.get("Email mời PV - Gửi lúc", ""),
++            "note": "Email đã được gửi trước đó. Truyền force=true để gửi lại.",
++        })
++
++    ok, info = lark_mail.send_invite_email(c)
++    now = datetime.now().strftime("%d/%m/%Y %H:%M")
++    if ok:
++        db.update_candidate_fields(candidate_id, {
++            "email_invite_status": "sent",
++            "email_invite_sent_at": now,
++            "email_invite_error": "",
++        })
++        return jsonify({"ok": True, "status": "sent", "sent_at": now, "message_id": info})
++    else:
++        db.update_candidate_fields(candidate_id, {
++            "email_invite_status": "failed",
++            "email_invite_sent_at": now,
++            "email_invite_error": info,
++        })
++        return jsonify({"ok": False, "status": "failed", "error": info}), 502
++
++
+ @app.post("/api/candidates/<candidate_id>/upload-file")
+ @require_api_key
+ def upload_candidate_file(candidate_id):
+@@ -336,6 +386,37 @@ def send_candidate_to_lark(candidate_id):
+     return jsonify({"ok": ok, "chat_id": chat_id[:15] + "..."})
+ 
+ 
++VALID_PLATFORMS = ["topcv", "jobsgo", "vnw", "ybox", "glints"]
++
++
++@app.post("/api/admin/upload-cookies")
++@require_api_key
++def upload_cookies():
++    """Upload cookies cho 1 platform (TopCV/JobsGo/VNW...).
++    Body: { platform: 'topcv', cookies: [{name, value, domain, path, ...}], uploaded_by: 'email' }
++    """
++    data = request.get_json(silent=True) or {}
++    platform = (data.get("platform") or "").lower().strip()
++    cookies = data.get("cookies", [])
++    if platform not in VALID_PLATFORMS:
++        return jsonify({"error": f"platform phải là: {VALID_PLATFORMS}"}), 400
++    if not isinstance(cookies, list) or not cookies:
++        return jsonify({"error": "cookies phải là list non-empty"}), 400
++    # Validate cookie shape (each must have name + value)
++    for c in cookies[:5]:  # sample check
++        if not isinstance(c, dict) or "name" not in c or "value" not in c:
++            return jsonify({"error": "Mỗi cookie cần có 'name' và 'value'"}), 400
++    db.save_platform_cookies(platform, cookies, data.get("uploaded_by", ""))
++    return jsonify({"ok": True, "platform": platform, "count": len(cookies)})
++
++
++@app.get("/api/admin/cookies-status")
++@require_api_key
++def cookies_status():
++    """Liệt kê platform nào đã có cookies + ngày upload (không trả raw cookies)."""
++    return jsonify({"data": db.list_platform_cookies()})
++
++
+ @app.post("/api/jobs/<job_id>/upload-pv-template")
+ @require_api_key
+ def upload_pv_template(job_id):
+@@ -711,6 +792,8 @@ def upload_cv_pdf():
+             "nguon": data.get("nguon", "TopCV"),
+             "email_id": data.get("email_id", f"upload_{drive_url[-30:]}"),
+             "email_from": data.get("email", ""),
++            "email": data.get("email", "") or cv_info.get("email", ""),
++            "sdt": data.get("sdt", "") or cv_info.get("sdt", ""),
+         })
+         # Smart-match vị trí + chấm điểm AI
+         job = db.find_job_by_title(cv_info.get("vi_tri_ung_tuyen", ""))
+diff --git a/backend/db.py b/backend/db.py
+index 87cdee0..b1476b8 100644
+--- a/backend/db.py
++++ b/backend/db.py
+@@ -57,6 +57,7 @@ def add_candidate(data: dict) -> str:
+         "trang_thai": data.get("trang_thai", "CV mới"),
+         "tinh_trang": data.get("tinh_trang", ""),
+         "quan_ly_duyet": data.get("quan_ly_duyet", "Quản lý chưa check"),
++        "lich_pv": data.get("lich_pv", ""),
+         "ly_do": data.get("ly_do", ""),
+         "bai_test": data.get("bai_test", ""),
+         "link_phong_van": data.get("link_phong_van", ""),
+@@ -69,6 +70,10 @@ def add_candidate(data: dict) -> str:
+         "email_id": data.get("email_id", ""),
+         "topcv_cv_id": data.get("topcv_cv_id", ""),
+         "topcv_link": data.get("topcv_link", ""),
++        # Trạng thái gửi email mời PV: ""|"sent"|"failed"
++        "email_invite_status": data.get("email_invite_status", ""),
++        "email_invite_sent_at": data.get("email_invite_sent_at", ""),
++        "email_invite_error": data.get("email_invite_error", ""),
+         "created_at": firestore.SERVER_TIMESTAMP,
+     }
+     _get_db().collection("candidates").document(doc_id).set(doc)
+@@ -134,9 +139,10 @@ def update_candidate_fields(candidate_id: str, fields: dict):
+     """Update bất kỳ fields nào của candidate. Whitelist để an toàn."""
+     allowed = {
+         "vi_tri_ung_tuyen", "trang_thai", "tinh_trang", "quan_ly_duyet", "ly_do",
+-        "bai_test", "link_phong_van", "ghi_chu_ai", "job_id",
++        "bai_test", "link_phong_van", "lich_pv", "ghi_chu_ai", "job_id",
+         "ho_ten", "email", "sdt", "kinh_nghiem_nam", "truong_dai_hoc", "ky_nang",
+         "ngay_nhan",
++        "email_invite_status", "email_invite_sent_at", "email_invite_error",
+     }
+     update = {k: v for k, v in fields.items() if k in allowed}
+     if update:
+@@ -169,6 +175,7 @@ def _to_display(c: dict) -> dict:
+         "Trạng thái": c.get("trang_thai", "CV mới"),
+         "Tình trạng": c.get("tinh_trang", ""),
+         "Quản lý duyệt": c.get("quan_ly_duyet", ""),
++        "Lịch PV": c.get("lich_pv", ""),
+         "Lý do": c.get("ly_do", ""),
+         "Bài test": c.get("bai_test", ""),
+         "Link phỏng vấn": c.get("link_phong_van", ""),
+@@ -179,9 +186,49 @@ def _to_display(c: dict) -> dict:
+         "Đề xuất AI": c.get("de_xuat_ai", ""),
+         "Ghi chú AI": c.get("ghi_chu_ai", ""),
+         "Email ID": c.get("email_id", ""),
++        "Email mời PV - Trạng thái": c.get("email_invite_status", ""),
++        "Email mời PV - Gửi lúc": c.get("email_invite_sent_at", ""),
++        "Email mời PV - Lỗi": c.get("email_invite_error", ""),
+     }
+ 
+ 
++# ── Platform Cookies (cho headless scraper) ──────────────────────────────────
++
++def save_platform_cookies(platform: str, cookies: list, uploaded_by: str = ""):
++    """Lưu cookies platform vào Firestore. platform = 'topcv'|'jobsgo'|'vnw'..."""
++    _get_db().collection("platform_cookies").document(platform).set({
++        "platform": platform,
++        "cookies": cookies,
++        "uploaded_by": uploaded_by,
++        "uploaded_at": datetime.now().strftime("%d/%m/%Y %H:%M"),
++        "cookie_count": len(cookies),
++        "updated_at": firestore.SERVER_TIMESTAMP,
++    })
++    log.info("Saved %d cookies for %s", len(cookies), platform)
++
++
++def get_platform_cookies(platform: str) -> dict | None:
++    doc = _get_db().collection("platform_cookies").document(platform).get()
++    if not doc.exists:
++        return None
++    return doc.to_dict()
++
++
++def list_platform_cookies() -> list[dict]:
++    """List tất cả platform có cookies. Trả về metadata, không trả raw cookies."""
++    docs = _get_db().collection("platform_cookies").stream()
++    out = []
++    for d in docs:
++        data = d.to_dict() or {}
++        out.append({
++            "platform": d.id,
++            "uploaded_by": data.get("uploaded_by", ""),
++            "uploaded_at": data.get("uploaded_at", ""),
++            "cookie_count": data.get("cookie_count", 0),
++        })
++    return out
++
++
+ # ── Jobs ──────────────────────────────────────────────────────────────────────
+ 
+ def add_job(data: dict) -> str:
+diff --git a/frontend/index.html b/frontend/index.html
+index 61c105c..0ce514a 100644
+--- a/frontend/index.html
++++ b/frontend/index.html
+@@ -251,6 +251,7 @@ textarea.form-control{resize:vertical;min-height:120px}
+     <h2 id="pageTitle">Danh sách ứng viên</h2>
+     <div style="display:flex;gap:10px">
+       <button class="btn btn-ghost btn-sm" onclick="refreshData()">↻ Làm mới</button>
++      <button class="btn btn-ghost btn-sm" id="addCvBtn" onclick="openAddCvModal()" style="display:none">➕ Thêm CV thủ công</button>
+       <button class="btn btn-primary btn-sm" id="mainAction" onclick="openAddJob()">+ Thêm vị trí</button>
+     </div>
+   </div>
+@@ -472,6 +473,62 @@ textarea.form-control{resize:vertical;min-height:120px}
+   </div>
+ </div>
+ 
++<!-- Add CV Modal -->
++<div id="addCvModal" class="modal" style="display:none">
++  <div class="modal-content" style="max-width:600px">
++    <div class="modal-header">
++      <h3>➕ Thêm CV mới (thủ công)</h3>
++      <button onclick="closeAddCvModal()" class="modal-close">✕</button>
++    </div>
++    <div class="modal-body">
++      <div class="form-row">
++        <div class="form-group" style="flex:1">
++          <label>Họ tên *</label>
++          <input type="text" id="cvName" class="form-control" placeholder="VD: Nguyễn Văn A"/>
++        </div>
++        <div class="form-group" style="flex:1">
++          <label>Email *</label>
++          <input type="email" id="cvEmail" class="form-control" placeholder="email@gmail.com"/>
++        </div>
++      </div>
++      <div class="form-row">
++        <div class="form-group" style="flex:1">
++          <label>SĐT</label>
++          <input type="text" id="cvSdt" class="form-control" placeholder="09xxxxxxxx"/>
++        </div>
++        <div class="form-group" style="flex:1">
++          <label>Vị trí ứng tuyển *</label>
++          <select id="cvPosition" class="form-control">
++            <option value="">— Chọn vị trí —</option>
++          </select>
++        </div>
++      </div>
++      <div class="form-group">
++        <label>Nguồn</label>
++        <select id="cvNguon" class="form-control">
++          <option value="Thêm tay">Thêm tay</option>
++          <option value="Email trực tiếp">Email trực tiếp</option>
++          <option value="TopCV">TopCV</option>
++          <option value="VietnamWorks">VietnamWorks</option>
++          <option value="JobGo">JobGo</option>
++          <option value="LinkedIn">LinkedIn</option>
++          <option value="Giới thiệu">Giới thiệu</option>
++          <option value="Khác">Khác</option>
++        </select>
++      </div>
++      <div class="form-group">
++        <label>File CV (PDF, max 20MB) *</label>
++        <input type="file" id="cvFile" accept=".pdf" style="font-size:13px"/>
++        <div style="font-size:11px;color:var(--gray-500);margin-top:4px">PDF sẽ được upload + AI tự extract + chấm điểm theo JD</div>
++      </div>
++      <div class="form-actions">
++        <button class="btn btn-ghost" onclick="closeAddCvModal()">Hủy</button>
++        <button class="btn btn-primary" onclick="submitAddCv()" id="cvSubmitBtn">💾 Thêm CV</button>
++      </div>
++    </div>
++  </div>
++</div>
++
+ <div class="toast" id="toast"></div>
+ 
+ <!-- Agent Chat Widget -->
+@@ -586,6 +643,8 @@ function showTab(tab) {
+   const titles = {dashboard:'Thống kê tuyển dụng', candidates:'Danh sách ứng viên', jobs:'Vị trí tuyển dụng'};
+   document.getElementById('pageTitle').textContent = titles[tab];
+   const mainBtn = document.getElementById('mainAction');
++  const addCvBtn = document.getElementById('addCvBtn');
++  addCvBtn.style.display = tab === 'candidates' ? '' : 'none';
+   if (tab === 'dashboard') {
+     mainBtn.textContent = '↻ Làm mới';
+     mainBtn.onclick = () => { refreshData(); setTimeout(renderDashboard, 500); };
+@@ -707,13 +766,17 @@ function renderCandidates(list) {
+     <thead><tr>
+       <th>Ứng viên</th><th>Vị trí</th><th>Nguồn</th><th>Ngày</th>
+       <th>Trạng thái</th><th>Tình trạng</th><th>AI đánh giá</th>
+-      <th>Bài test</th><th>PV file</th><th>Lý do</th><th></th>
++      <th>Lịch PV</th><th>Bài test</th><th>PV file</th><th>Lý do</th>
++      <th>Đã gửi Email</th><th></th>
+     </tr></thead>
+     <tbody>${list.map(c=>{
+       const id = c['ID'];
+       const baiTest = c['Bài test']||'';
+       const pvFile = c['Link phỏng vấn']||'';
+       const lyDo = c['Lý do']||'';
++      const emailStatus = c['Email mời PV - Trạng thái']||'';
++      const emailSentAt = c['Email mời PV - Gửi lúc']||'';
++      const emailError = c['Email mời PV - Lỗi']||'';
+       return `<tr>
+         <td class="name-cell" onclick="openCandidate('${id}')" style="cursor:pointer"><strong>${escapeHtml(c['Họ tên']||'N/A')}</strong><span>${escapeHtml(c['Email']||'')}</span></td>
+         <td><select class="inline-select" onchange="patchField('${id}','vi_tri_ung_tuyen',this.value)" onclick="event.stopPropagation()">
+@@ -736,9 +799,36 @@ function renderCandidates(list) {
+           </select>
+         </td>
+         <td>${c['Điểm AI']?`<span class="score-chip ${scoreClass(c['Điểm AI'])}">${c['Điểm AI']}/100</span>`:'—'}</td>
++        <td>
++          ${(() => {
++            const lichPv = c['Lịch PV'] || '';
++            const isoVal = lichPv ? toIsoLocal(lichPv) : '';
++            return `<input type="datetime-local" class="inline-select" style="font-size:11px;min-width:140px" value="${isoVal}" onchange="setLichPv('${id}', this.value)" onclick="event.stopPropagation()"/>${lichPv?`<div style="font-size:10px;color:#0891b2;margin-top:2px">📅 ${escapeHtml(lichPv)}</div>`:''}`;
++          })()}
++        </td>
+         <td>${baiTest?`<a href="${escapeHtml(baiTest)}" target="_blank" style="font-size:12px">🔗 Mở</a>`:'<span style="color:var(--gray-400);font-size:12px">—</span>'}</td>
+         <td>${pvFile?`<a href="${escapeHtml(pvFile)}" target="_blank" style="font-size:12px">📋 Xem</a>`:'<span style="color:var(--gray-400);font-size:12px">—</span>'}</td>
+         <td title="${escapeHtml(lyDo)}" style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(lyDo.substring(0,30))||'—'}</td>
++        <td style="font-size:12px;min-width:170px">
++          ${(() => {
++            if (emailStatus === 'sent') {
++              return `<div style="color:#16a34a;font-weight:600">✅ Đã gửi email PV cho ứng viên</div>
++                <div style="font-size:10px;color:var(--gray-500);margin-top:2px">${escapeHtml(emailSentAt)}</div>
++                <button class="btn btn-ghost btn-sm" style="margin-top:4px;font-size:11px" title="Gửi lại email mời PV" onclick="event.stopPropagation();sendInviteEmail('${id}', true)">↻ Gửi lại</button>`;
++            }
++            if (emailStatus === 'failed') {
++              return `<div style="color:#dc2626;font-weight:600" title="${escapeHtml(emailError)}">❌ Gửi thất bại</div>
++                <div style="font-size:10px;color:var(--gray-500);margin-top:2px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(emailError)}">${escapeHtml(emailError.substring(0,40))}</div>
++                <button class="btn btn-sm" style="margin-top:4px;font-size:11px;background:#dc2626;color:#fff" title="Gửi lại email mời PV" onclick="event.stopPropagation();sendInviteEmail('${id}', true)">↻ Gửi lại Email</button>`;
++            }
++            // Chưa gửi → cho phép gửi thủ công
++            const canSend = (c['Trạng thái']==='Quản lý đã duyệt' && c['Tình trạng']==='Phù hợp' && (c['Lịch PV']||'').trim());
++            if (canSend) {
++              return `<button class="btn btn-primary btn-sm" style="font-size:11px" title="Gửi email mời PV ngay" onclick="event.stopPropagation();sendInviteEmail('${id}', false)">✉️ Gửi mời PV</button>`;
++            }
++            return `<span style="color:var(--gray-400);font-size:11px">—</span>`;
++          })()}
++        </td>
+         <td style="white-space:nowrap">
+           ${c['Link CV']?`<button class="btn btn-primary btn-sm" title="Mở CV PDF" onclick="event.stopPropagation();viewCV('${id}')">📄</button>`:''}
+           <button class="btn btn-sm" style="background:#0891b2;color:#fff" title="Gửi vào nhóm Lark" onclick="event.stopPropagation();sendToLark('${id}','${escapeHtml((c['Họ tên']||'').replace(/'/g,''))}')">💬</button>
+@@ -750,6 +840,28 @@ function renderCandidates(list) {
+   </table>`;
+ }
+ 
++// "HH:mm dd/MM/yyyy" → ISO "yyyy-MM-ddTHH:mm" for input datetime-local
++function toIsoLocal(vnFormat) {
++  if (!vnFormat) return '';
++  const m = vnFormat.match(/(\d{2}):(\d{2})\s+(\d{2})\/(\d{2})\/(\d{4})/);
++  if (!m) return '';
++  return `${m[5]}-${m[4]}-${m[3]}T${m[1]}:${m[2]}`;
++}
++// ISO → "HH:mm dd/MM/yyyy"
++function fromIsoLocal(iso) {
++  if (!iso) return '';
++  const m = iso.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
++  if (!m) return '';
++  return `${m[4]}:${m[5]} ${m[3]}/${m[2]}/${m[1]}`;
++}
++async function setLichPv(id, isoValue) {
++  const vnVal = fromIsoLocal(isoValue);
++  await patchField(id, 'lich_pv', vnVal);
++  const c = allCandidates.find(x => x['ID'] === id);
++  if (c) c['Lịch PV'] = vnVal;
++  setTimeout(() => renderCandidates(allCandidates), 200);
++}
++
+ async function patchField(id, field, value) {
+   try {
+     await fetch(`${API_BASE}/api/candidates/${id}`, {
+@@ -758,13 +870,46 @@ async function patchField(id, field, value) {
+     });
+     const c = allCandidates.find(x=>x['ID']===id);
+     if (c) {
+-      const fieldMap = {'vi_tri_ung_tuyen':'Vị trí ứng tuyển','trang_thai':'Trạng thái','tinh_trang':'Tình trạng','quan_ly_duyet':'Quản lý duyệt','ly_do':'Lý do','bai_test':'Bài test','link_phong_van':'Link phỏng vấn'};
++      const fieldMap = {'vi_tri_ung_tuyen':'Vị trí ứng tuyển','trang_thai':'Trạng thái','tinh_trang':'Tình trạng','quan_ly_duyet':'Quản lý duyệt','lich_pv':'Lịch PV','ly_do':'Lý do','bai_test':'Bài test','link_phong_van':'Link phỏng vấn'};
+       c[fieldMap[field]||field] = value;
+     }
+     showToast(`✅ Đã cập nhật ${field}`);
+   } catch(e) { showToast('Lỗi cập nhật: '+e.message); }
+ }
+ 
++async function sendInviteEmail(id, force) {
++  const c = allCandidates.find(x => x['ID'] === id);
++  const name = c ? (c['Họ tên'] || 'ứng viên') : 'ứng viên';
++  if (force && !confirm(`Gửi LẠI email mời phỏng vấn cho ${name}?`)) return;
++  showToast(`⏳ Đang gửi email mời PV cho ${name}...`);
++  try {
++    const r = await fetch(`${API_BASE}/api/candidates/${id}/send-invite-email`, {
++      method:'POST',
++      headers:{'Content-Type':'application/json','X-API-Key':apiToken},
++      body: JSON.stringify({force: !!force}),
++    });
++    const d = await r.json();
++    if (d.ok) {
++      showToast(`✅ Đã gửi email mời PV cho ${name}`);
++      if (c) {
++        c['Email mời PV - Trạng thái'] = 'sent';
++        c['Email mời PV - Gửi lúc'] = d.sent_at || '';
++        c['Email mời PV - Lỗi'] = '';
++      }
++    } else {
++      const err = d.error || 'Lỗi không rõ';
++      showToast(`❌ Gửi thất bại: ${err}`);
++      if (c) {
++        c['Email mời PV - Trạng thái'] = 'failed';
++        c['Email mời PV - Lỗi'] = err;
++      }
++    }
++    renderCandidates(allCandidates);
++  } catch(e) {
++    showToast('❌ Lỗi gọi API: ' + e.message);
++  }
++}
++
+ async function uploadAttachment(id, kind, inputId) {
+   const input = document.getElementById(inputId);
+   const file = input?.files?.[0];
+@@ -986,6 +1131,78 @@ function viewJob(id) {
+   document.getElementById('overlay').classList.add('show');
+ }
+ 
++function openAddCvModal() {
++  // Populate position dropdown
++  const sel = document.getElementById('cvPosition');
++  sel.innerHTML = '<option value="">— Chọn vị trí —</option>' +
++    allJobs.filter(j => j['Trạng thái'] === 'Đang tuyển')
++           .map(j => `<option value="${escapeHtml(j['Tên vị trí'])}">${escapeHtml(j['Tên vị trí'])}</option>`).join('');
++  ['cvName','cvEmail','cvSdt'].forEach(id => document.getElementById(id).value = '');
++  document.getElementById('cvFile').value = '';
++  document.getElementById('cvNguon').value = 'Thêm tay';
++  document.getElementById('addCvModal').style.display = 'flex';
++}
++
++function closeAddCvModal() {
++  document.getElementById('addCvModal').style.display = 'none';
++}
++
++async function submitAddCv() {
++  const name = document.getElementById('cvName').value.trim();
++  const email = document.getElementById('cvEmail').value.trim();
++  const sdt = document.getElementById('cvSdt').value.trim();
++  const position = document.getElementById('cvPosition').value;
++  const nguon = document.getElementById('cvNguon').value;
++  const file = document.getElementById('cvFile').files[0];
++  if (!name) { showToast('⚠️ Nhập họ tên'); return; }
++  if (!email) { showToast('⚠️ Nhập email'); return; }
++  if (!position) { showToast('⚠️ Chọn vị trí ứng tuyển'); return; }
++  if (!file) { showToast('⚠️ Chọn file CV PDF'); return; }
++  if (file.size > 20*1024*1024) { showToast('⚠️ File > 20MB'); return; }
++  if (!/\.pdf$/i.test(file.name)) { showToast('⚠️ Chỉ chấp nhận file PDF'); return; }
++
++  const btn = document.getElementById('cvSubmitBtn');
++  btn.disabled = true;
++  btn.textContent = '⏳ Đang upload + AI extract...';
++  showToast('⏳ Đang xử lý CV qua AI...');
++
++  try {
++    const buf = await file.arrayBuffer();
++    const bytes = new Uint8Array(buf);
++    let bin = '';
++    for (let i=0;i<bytes.length;i+=0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i,i+0x8000));
++    const b64 = btoa(bin);
++
++    // Generate email_id unique
++    const emailIdSafe = `manual_${email.replace(/[^a-zA-Z0-9]/g,'')}_${Date.now()}`;
++    const r = await fetch(`${API_BASE}/api/upload-cv-pdf`, {
++      method:'POST', headers:{'Content-Type':'application/json','X-API-Key':apiToken},
++      body: JSON.stringify({
++        pdf_base64: b64,
++        name: name,
++        position: position,
++        email: email,
++        sdt: sdt,
++        nguon: nguon,
++        email_id: emailIdSafe,
++      })
++    });
++    const d = await r.json();
++    if (d.ok || d.action === 'created') {
++      showToast(`✅ Đã thêm "${name}" — AI đang chấm điểm`);
++      closeAddCvModal();
++      setTimeout(() => refreshData(), 1500);
++    } else {
++      showToast('❌ '+(d.error || 'Lỗi thêm CV'));
++    }
++  } catch(e) {
++    showToast('❌ '+e.message);
++  } finally {
++    btn.disabled = false;
++    btn.textContent = '💾 Thêm CV';
++  }
++}
++
+ function openAddJob() {
+   document.getElementById('jobModalTitle').textContent = 'Thêm vị trí tuyển dụng';
+   document.getElementById('jobId').value = '';

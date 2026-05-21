@@ -1,7 +1,6 @@
-# BTVN Buổi 4 — Khoá Claude Code (Agent Boss Starter)
+# BTVN Buổi 4 — Khoá Claude Code tại SEONGON
 
 > **Học viên:** Nguyễn Thị Ngọc Linh — HRM SEONGON
-> **Mentor:** Mai Xuân Đạt
 > **Ngày nộp:** 21/05/2026
 
 ---
@@ -229,4 +228,4 @@ python rejection_mail_agent.py          # Agent #2
 - **HRM Dashboard live:** https://ngoclinhhrm.com/tuyen-dung/
 - **HRM API base:** https://hrm-api-521103150103.asia-southeast1.run.app
 - **Repo BTVN buổi 3 (HRM system):** https://github.com/nguyenthingoclinh-dev/btvn-claude-code-buoi3
-- **Khoá học:** Agent Boss Starter (Mai Xuân Đạt)
+- **Khoá học:** Claude Code tại SEONGON

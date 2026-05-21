@@ -1,13 +1,13 @@
 ---
 name: hrm-loc-ung-vien
-description: "Tìm và lọc ứng viên trong HRM SEONGON tại ngoclinhhrm.com/tuyen-dung theo nhiều tiêu chí — vị trí, điểm AI, trạng thái, nguồn, thời gian. Trigger khi user yêu cầu tìm ứng viên, lọc CV, ai phù hợp với vị trí X, top ứng viên điểm cao."
+description: This skill should be used when the user asks to "tìm ứng viên", "lọc CV", "ai phù hợp với vị trí X", "top ứng viên điểm cao", "filter candidates by Y", or any multi-criteria candidate search on HRM SEONGON. Filters by vị trí, điểm AI, trạng thái, nguồn, thời gian using GET /api/candidates and client-side filter logic. Use when user needs to find a subset of candidates from the 90+ records on ngoclinhhrm.com/tuyen-dung.
 ---
 
 # Skill: Lọc ứng viên trong HRM SEONGON
 
 Skill này giúp HR Manager nhanh chóng tìm ra ứng viên phù hợp từ dashboard HRM **https://ngoclinhhrm.com/tuyen-dung/** theo nhiều tiêu chí.
 
-## 🎯 Khi nào dùng skill này
+## Khi nào dùng skill này
 
 Trigger khi user:
 - "Tìm ứng viên cho vị trí [X]"

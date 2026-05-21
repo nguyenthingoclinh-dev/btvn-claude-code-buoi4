@@ -1,7 +1,6 @@
 ---
 name: auto-send-email
-description: Tự động gửi email tuyển dụng từ tuyendung@seongon.com (Lark Mail) tới ứng viên — mời phỏng vấn, cảm ơn sau PV, từ chối, thông báo trúng tuyển. Trigger khi user yêu cầu gửi email cho ứng viên, gửi thư mời PV, gửi thư từ chối, gửi mail trúng tuyển.
-type: skill
+description: This skill should be used when the user asks to "gửi email cho ứng viên", "gửi thư mời PV", "gửi thư cảm ơn sau PV", "gửi thư từ chối", "gửi mail trúng tuyển", "send interview invite email", or any candidate-facing recruitment email task. Sends email from tuyendung@seongon.com via Lark Mail OpenAPI using 4 SEONGON templates (mời PV / cảm ơn / từ chối / trúng tuyển). Use when communication-agent or main session needs to deliver formal recruitment email to a candidate.
 ---
 
 # Skill: auto-send-email

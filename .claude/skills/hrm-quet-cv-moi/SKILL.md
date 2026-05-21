@@ -1,13 +1,13 @@
 ---
 name: hrm-quet-cv-moi
-description: "Quét email tuyển dụng tuyendung@seongon.com và đồng bộ CV mới vào dashboard HRM SEONGON tại ngoclinhhrm.com/tuyen-dung. Trigger khi user yêu cầu quét email, cập nhật CV mới, đồng bộ HRM, scan email N giờ qua."
+description: This skill should be used when the user asks to "quét email tuyển dụng", "cập nhật CV mới", "đồng bộ HRM", "scan email N giờ qua", "fetch new CVs from email", or any sync between tuyendung@seongon.com inbox and the HRM dashboard. Triggers POST /api/scan-emails?hours=N then polls /api/scan-status until done. Use when user wants the latest applications to appear on ngoclinhhrm.com/tuyen-dung.
 ---
 
 # Skill: Quét CV mới vào HRM SEONGON
 
 Skill này tự động hoá việc cập nhật dashboard HRM tại **https://ngoclinhhrm.com/tuyen-dung/** — quét email `tuyendung@seongon.com`, xử lý CV mới bằng AI, lưu vào hệ thống.
 
-## 🎯 Khi nào dùng skill này
+## Khi nào dùng skill này
 
 Trigger khi user:
 - "Quét email tuyển dụng giúp tôi"

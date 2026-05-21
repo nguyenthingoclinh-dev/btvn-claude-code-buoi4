@@ -1,7 +1,6 @@
 ---
 name: lark-setup-bot
-description: Hướng dẫn tạo và cấu hình Lark Bot từ đầu — tạo app trên Lark Developer Console, cấp scope, kết nối webhook, lấy tenant_access_token, gửi tin Lark IM text/card đến HRM. Trigger khi user yêu cầu tạo bot Lark, setup app Lark, gửi tin Lark IM, gửi card Lark, báo Lark cho HRM, notify Lark.
-type: skill
+description: This skill should be used when the user asks to "tạo bot Lark", "setup app Lark", "gửi tin Lark IM", "gửi card Lark", "báo Lark cho HRM", "notify Lark", or any Lark Bot creation/messaging task. Walks through creating Lark app on Developer Console, granting scopes, connecting webhook, obtaining tenant_access_token, and sending Lark IM text/card to HRM. Use when bootstrapping a new Lark Bot or sending IM notifications from one.
 ---
 
 # Skill: lark-setup-bot

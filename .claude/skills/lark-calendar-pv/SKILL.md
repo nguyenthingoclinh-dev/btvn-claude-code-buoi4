@@ -1,7 +1,6 @@
 ---
 name: lark-calendar-pv
-description: Tạo lịch phỏng vấn tự động trên Lark Calendar cho ứng viên SEONGON — sinh event có Google Meet/Lark Meet link, mời người phỏng vấn + HRM, đồng bộ sang HRM dashboard, gửi email mời PV cho ứng viên. Trigger khi user yêu cầu tạo lịch PV, đặt lịch phỏng vấn, book interview, schedule interview cho ứng viên X vào ngày Y.
-type: skill
+description: This skill should be used when the user asks to "tạo lịch phỏng vấn", "đặt lịch PV", "book interview", "schedule interview cho ứng viên X vào ngày Y", or any Lark Calendar event for a candidate interview. Creates Lark Calendar event with Google Meet/Lark Meet link, invites interviewer + HRM, syncs back to HRM dashboard. Use when scheduling a confirmed interview slot for a candidate.
 ---
 
 # Skill: lark-calendar-pv

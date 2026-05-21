@@ -1,13 +1,13 @@
 ---
 name: hrm-cap-nhat-ung-vien
-description: "Cập nhật thông tin ứng viên trong HRM SEONGON tại ngoclinhhrm.com/tuyen-dung — đổi trạng thái pipeline, đánh giá phù hợp hoặc không phù hợp, gắn link bài test, gắn file đánh giá phỏng vấn, xoá ứng viên. Trigger khi user yêu cầu chuyển trạng thái, đánh dấu phù hợp, gắn link bài test, xoá ứng viên."
+description: This skill should be used when the user asks to "chuyển trạng thái ứng viên", "đánh dấu phù hợp hoặc không phù hợp", "gắn link bài test", "gắn file phỏng vấn", "xoá ứng viên", "update candidate status", or any PATCH/DELETE operation on the HRM SEONGON dashboard. Calls PATCH /api/candidates/{id} or DELETE /api/candidates/{id} on hrm-api-521103150103.asia-southeast1.run.app with validation against enum values. Use when modifying any candidate field on ngoclinhhrm.com/tuyen-dung.
 ---
 
 # Skill: Cập nhật ứng viên trong HRM SEONGON
 
 Skill này cho phép user (qua chat) cập nhật trạng thái pipeline tuyển dụng mà không cần mở dashboard, đặc biệt hữu ích khi cần thao tác hàng loạt.
 
-## 🎯 Khi nào dùng skill này
+## Khi nào dùng skill này
 
 Trigger khi user:
 - "Chuyển trạng thái A sang Phỏng vấn chuyên môn"

@@ -1,3 +1,9 @@
+---
+name: lark-setup-bot
+description: Hướng dẫn tạo và cấu hình Lark Bot từ đầu — tạo app trên Lark Developer Console, cấp scope, kết nối webhook, lấy tenant_access_token, gửi tin Lark IM text/card đến HRM. Trigger khi user yêu cầu tạo bot Lark, setup app Lark, gửi tin Lark IM, gửi card Lark, báo Lark cho HRM, notify Lark.
+type: skill
+---
+
 # Skill: lark-setup-bot
 
 Hướng dẫn tạo Lark Bot từ đầu — từ tạo app trên Lark Developer Console đến kết nối webhook, lấy token, và chạy bot Python đầu tiên.

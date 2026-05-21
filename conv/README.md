@@ -1,9 +1,13 @@
 # Chat history voi Claude Code
 
-## File chinh
+## 2 file de Thay cham
 
-[`chat-history-clean.txt`](./chat-history-clean.txt) — bien ban session da clean
-(plain text, khong icon, tom tat theo 11 giai doan logic cua session).
+| File | Mo ta | Dung de |
+|------|-------|---------|
+| [`20-05-2026-lich-su-build-2-agent.txt`](./20-05-2026-lich-su-build-2-agent.txt) | **Raw export** tu Claude Code session (480 messages, 123 KB) - chua TOAN BO prompt user + response Claude + tool call summary | Dap ung yeu cau BTVN: "File ghi chep lai lich su tro chuyen voi Claude Code /export" |
+| [`chat-history-clean.txt`](./chat-history-clean.txt) | Bien ban session da clean (plain text, khong icon, tom tat theo 11 giai doan logic) | Cho Thay doc nhanh hieu flow tong the |
+
+Nguon raw: `~/.claude/projects/.../e337a42b-c26d-4e00-a576-c93d040f9647.jsonl`
 
 ## Noi dung session
 

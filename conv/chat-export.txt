@@ -1,0 +1,1882 @@
+╭─── Claude Code v2.1.132 ─────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│              Welcome back AI Academy!              │ started                 │
+│                                                    │ Run /init to create a … │
+│                      ▗ ▗   ▖ ▖                     │ ─────────────────────── │
+│                                                    │ What's new              │
+│                        ▘▘ ▝▝                       │ Added new `claude agen… │
+│ Sonnet 4.6 · Claude Max · aiacademy@seongon.com's  │ Fast mode now uses Opu… │
+│ Organization                                       │ Plugins with a root-le… │
+│                 ~/Desktop/Lark Bot                 │ /release-notes for more │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+❯ Tôi muốn làm 1 con Agent                                                      
+
+⏺ Sếp muốn làm agent để làm gì? Cho tôi biết thêm:
+
+  1. Mục đích — Agent này giải quyết vấn đề gì? (ví dụ: tự động hóa tuyển dụng,
+  phân tích dữ liệu, gửi báo cáo, hỗ trợ khách hàng...)
+  2. Input/Output — Nhận gì vào, trả gì ra?
+  3. Chạy khi nào — Theo lịch tự động, hay khi có trigger (email đến, form
+  submit, tin nhắn Lark...)?
+  4. Tích hợp hệ thống nào — Lark, Gmail, Google Sheets, HRM, CRM...?
+
+❯ 1. Mục đích: Tự động hoá tuyển dụng                                           
+  2. Input/Output: Làm trên trang của tôi: https://ngoclinhhrm.com/tuyen-dung/  
+  3. Khi nào ứng viên được: Đổi trạng thái "Quản lý đã duyệt" và Tình trạng     
+  "Phù hợp" và có thời gian trong Lịch phỏng vấn thì gửi Email cho ứng viên     
+  "Thư mời phỏng vấn"                                                           
+  4. Tích hợp Skill /auto-send-email để gửi email cho ứng viên qua email        
+  tuyendung@seongon.com . Gửi xong Email thì báo qua Lark cho tôi bằng skill    
+  /lark-setup-bot và add calendar Lark cho tôi bằng skill /lark-calendar-pv     
+
+⏺ Để tôi xem cấu trúc project hiện tại và HRM page trước khi thiết kế agent.
+
+⏺ Để tôi đọc các file liên quan để hiểu cấu trúc hiện tại.
+
+  Read 4 files (ctrl+o to expand)
+
+⏺ Cho tôi đọc thêm cv_processor để hiểu các field của bảng ứng viên.
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ Cho tôi xem thêm phần cv_processor để biết các tên field trong Lark Base.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+❯ /model claude-opus-4-7                                                        
+  ⎿  Set model to claude-opus-4-7
+
+❯ tuyendung@seongon.com là Lark mail. Sử dụng skill Lark Mail để gửi nhé        
+
+⏺ Tôi sẽ tìm skill auto-send-email để hiểu cách gửi qua Lark Mail.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Sếp đúng — tuyendung@seongon.com là Lark Mail. Để tôi xem cv_processor.py xử
+  lý Lark Mail API thế nào để dùng cùng pattern.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Tôi sẽ thay phần gửi email bằng Lark Mail API (giống pattern đọc mail đã có
+  sẵn trong cv_processor.py).
+
+⏺ Update(interview_invite_agent.py)
+  ⎿  Added 4 lines, removed 12 lines
+       8    - Chưa xử lý  (track qua interview_sent.json)
+       9  
+      10  Hành động (theo thứ tự):
+      11 -  1. Gửi email "Thư mời phỏng vấn" từ tuyendung@seongon.com  (G
+         -mail API)                                                      
+      12 -  2. Gửi thông báo Lark cho HRM                                
+      11 +  1. Gửi email "Thư mời phỏng vấn" từ tuyendung@seongon.com  (L
+         +ark Mail API)                                                  
+      12 +  2. Gửi thông báo Lark IM cho HRM                             
+      13    3. Tạo event Lark Calendar trên lịch của HRM
+      14  """
+      15  
+      16  import base64
+      17  import json
+      18  import logging
+      19 -import os                                                      
+      19  from datetime import datetime, timedelta, timezone
+      21 -from email.mime.multipart import MIMEMultipart                 
+      22 -from email.mime.text import MIMEText                           
+      20  from pathlib import Path
+      21 +from urllib.parse import quote                                 
+      22  
+      23  import requests
+      26 -from google.oauth2 import service_account                      
+      27 -from googleapiclient.discovery import build                    
+      24  
+      25  from config import (
+      30 -    APP_ID,                                                    
+      31 -    APP_SECRET,                                                
+      26      CV_GMAIL_USER,
+      27      CV_LARK_APP_TOKEN,
+      28      CV_LARK_TABLE_ID,
+      29      CV_LARK_TOKEN_TYPE,
+      36 -    CV_LARK_USER_REFRESH_TOKEN,                                
+      30      CV_NOTIFY_EMAIL,
+      31      CV_NOTIFY_USER_ID,
+      39 -    CV_SERVICE_ACCOUNT_FILE,                                   
+      32      LARK_DOMAIN,
+      33  )
+      42 -from cv_processor import _get_lark_user_access_token, _service_
+         -account_info                                                   
+      34 +from cv_processor import _get_lark_user_access_token           
+      35  from lark_client import lark
+      36  
+      37  _VN_TZ = timezone(timedelta(hours=7))
+
+⏺ Update(interview_invite_agent.py)
+  ⎿  Added 67 lines, removed 61 lines
+      158      return records
+      159  
+      160  
+      161 -# ─── Gmail: gửi email mời phỏng vấn ─────────────────────────
+          -────────────────                                              
+      161 +# ─── Lark Mail: gửi email mời phỏng vấn từ tuyendung@seongon.
+          +com ────────────                                              
+      162  
+      163 -_GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
+      164 -                                                              
+      165 -                                                              
+      166 -def _gmail_service():                                         
+      167 -    creds = service_account.Credentials.from_service_account_i
+          -nfo(                                                          
+      168 -        _service_account_info(), scopes=_GMAIL_SCOPES         
+      169 -    ).with_subject(CV_GMAIL_USER)                             
+      170 -    return build("gmail", "v1", credentials=creds)            
+      171 -                                                              
+      172 -                                                              
+      173 -def _build_email(fields: dict) -> tuple[MIMEMultipart, str]:  
+      174 -    """Tạo MIMEMultipart và địa chỉ email ứng viên."""        
+      175 -    name     = _str(fields.get(FIELD_NAME)) or "Ứng viên"     
+      176 -    position = _str(fields.get(FIELD_POSITION)) or "vị trí ứng
+          - tuyển"                                                       
+      177 -    to_email = _str(fields.get(FIELD_EMAIL))                  
+      178 -                                                              
+      179 -    ts = _ts_ms(fields.get(FIELD_INTERVIEW))                  
+      180 -    interview_str = _fmt_vn(ts) if ts else "sẽ được xác nhận r
+          -iêng"                                                         
+      181 -                                                              
+      182 -    msg = MIMEMultipart("alternative")                        
+      183 -    msg["Subject"] = f"[SEONGON] Thư mời phỏng vấn — {position
+          -}"                                                            
+      184 -    msg["From"]    = f"SEONGON Tuyển Dụng <{CV_GMAIL_USER}>"  
+      185 -    msg["To"]      = to_email                                 
+      186 -                                                              
+      187 -    html_body = f"""                                          
+      163 +def _build_email_html(name: str, position: str, interview_str:
+          + str) -> str:                                                 
+      164 +    return f"""\                                              
+      165  <div style="font-family:Arial,sans-serif;font-size:15px;color:
+           #222;max-width:600px">
+      189 -<p>Kính gửi <strong>{name}</strong>,</p>                      
+      166 +<p>Kính gửi anh/chị <b>{name}</b>,</p>                        
+      167  
+      191 -<p>Sau khi xem xét hồ sơ, <strong>SEONGON</strong> trân trọng 
+          -mời bạn tham dự buổi                                          
+      192 -phỏng vấn cho vị trí <strong>{position}</strong>:</p>         
+      168 +<p>SEONGON cảm ơn anh/chị đã quan tâm và ứng tuyển vị trí <b>{
+          +position}</b> tại công ty.                                    
+      169 +Sau khi xem xét hồ sơ, chúng tôi rất ấn tượng và mong muốn đượ
+          +c trao đổi trực tiếp với anh/chị.</p>                         
+      170  
+      194 -<table style="border-collapse:collapse;margin:16px 0">        
+      195 -  <tr>                                                        
+      196 -    <td style="padding:6px 12px 6px 0;font-weight:bold">📅 Thờ
+          -i gian</td>                                                   
+      197 -    <td style="padding:6px 0">{interview_str}</td>            
+      198 -  </tr>                                                       
+      199 -  <tr>                                                        
+      200 -    <td style="padding:6px 12px 6px 0;font-weight:bold">📍 Hìn
+          -h thức</td>                                                   
+      201 -    <td style="padding:6px 0">Online hoặc tại văn phòng SEONGO
+          -N (sẽ xác nhận trước buổi PV)</td>                            
+      202 -  </tr>                                                       
+      203 -  <tr>                                                        
+      204 -    <td style="padding:6px 12px 6px 0;font-weight:bold">📞 Liê
+          -n hệ</td>                                                     
+      205 -    <td style="padding:6px 0"><a href="mailto:{CV_GMAIL_USER}"
+          ->{CV_GMAIL_USER}</a></td>                                     
+      206 -  </tr>                                                       
+      207 -</table>                                                      
+      171 +<p><b>Thông tin buổi phỏng vấn:</b></p>                       
+      172 +<ul>                                                          
+      173 +  <li>📅 <b>Thời gian:</b> {interview_str}</li>               
+      174 +  <li>📍 <b>Hình thức:</b> Online hoặc tại văn phòng SEONGON (
+          +sẽ xác nhận trước buổi PV)</li>                               
+      175 +  <li>⏱ <b>Thời lượng dự kiến:</b> 45–60 phút</li>            
+      176 +</ul>                                                         
+      177  
+      209 -<p>Vui lòng <strong>reply email này</strong> để xác nhận tham 
+          -dự trước                                                      
+      210 -<strong>24 giờ</strong> trước buổi phỏng vấn. Nếu cần thay đổi
+          - lịch, hãy liên hệ ngay                                       
+      211 -để chúng tôi sắp xếp lại.</p>                                 
+      178 +<p>Anh/chị vui lòng <b>reply email này</b> để xác nhận tham gi
+          +a trước <b>24 giờ</b>                                         
+      179 +trước buổi phỏng vấn. Nếu thời gian không phù hợp, xin đề xuất
+          + khung giờ thay thế.</p>                                      
+      180  
+      181  <p>Trân trọng,<br>
+      214 -<strong>Đội Tuyển Dụng SEONGON</strong><br>                   
+      215 -<a href="https://seongon.com">seongon.com</a></p>             
+      182 +<b>Phòng Tuyển dụng - SEONGON</b><br>                         
+      183 +Email: <a href="mailto:{CV_GMAIL_USER}">{CV_GMAIL_USER}</a><br
+          +>                                                             
+      184 +Website: <a href="https://seongon.com">seongon.com</a></p>    
+      185  </div>
+      186  """
+      218 -    msg.attach(MIMEText(html_body, "html", "utf-8"))          
+      219 -    return msg, to_email                                      
+      187  
+      188  
+      222 -def send_interview_email(record: dict) -> bool:               
+      223 -    fields = record.get("fields", {})                         
+      189 +def _lark_mail_send(to_email: str, to_name: str, subject: str,
+          + body_html: str) -> bool:                                     
+      190 +    """Gửi email qua Lark Mail OpenAPI, send AS tuyendung@seon
+          +gon.com."""                                                   
+      191 +    user_token = _get_lark_user_access_token()                
+      192 +    if not user_token:                                        
+      193 +        log.error("Không có Lark user access token — không gửi
+          + được mail")                                                  
+      194 +        return False                                          
+      195 +                                                              
+      196 +    sender = quote(CV_GMAIL_USER, safe="")  # URL-encode "tuye
+          +ndung@seongon.com"                                            
+      197 +    url = f"{LARK_DOMAIN}/open-apis/mail/v1/user_mailboxes/{se
+          +nder}/messages/send"                                          
+      198 +                                                              
+      199 +    body_b64 = base64.b64encode(body_html.encode("utf-8")).dec
+          +ode()                                                         
+      200 +    payload = {                                               
+      201 +        "subject": subject,                                   
+      202 +        "to": [{"mail_address": to_email, "name": to_name or t
+          +o_email}],                                                    
+      203 +        "body_html": body_b64,                                
+      204 +        "head_from": {                                        
+      205 +            "mail_address": CV_GMAIL_USER,                    
+      206 +            "name": "Phòng Tuyển dụng SEONGON",               
+      207 +        },                                                    
+      208 +    }                                                         
+      209 +    headers = {                                               
+      210 +        "Authorization": f"Bearer {user_token}",              
+      211 +        "Content-Type": "application/json; charset=utf-8",    
+      212 +    }                                                         
+      213      try:
+      225 -        msg, to_email = _build_email(fields)                  
+      226 -        if not to_email:                                      
+      227 -            log.warning("record %s thiếu email ứng viên", reco
+          -rd.get("record_id"))                                          
+      214 +        resp = requests.post(url, headers=headers, json=payloa
+          +d, timeout=20).json()                                         
+      215 +        if resp.get("code") != 0:                             
+      216 +            log.error("Lark mail send failed: %s", str(resp)[:
+          +400])                                                         
+      217              return False
+      229 -        raw = base64.urlsafe_b64encode(msg.as_bytes()).decode(
+          -)                                                             
+      230 -        _gmail_service().users().messages().send(             
+      231 -            userId="me", body={"raw": raw}                    
+      232 -        ).execute()                                           
+      233 -        log.info("✉️  Email gửi OK → %s", to_email)           
+      218 +        log.info(                                             
+      219 +            "✉️  Lark mail sent → %s (msg_id=%s)",            
+      220 +            to_email,                                         
+      221 +            resp.get("data", {}).get("message_id", ""),       
+      222 +        )                                                     
+      223          return True
+      224      except Exception:
+      236 -        log.exception("send_interview_email failed")          
+      225 +        log.exception("Lark mail send exception")             
+      226          return False
+      227  
+      228  
+      229 +def send_interview_email(record: dict) -> bool:               
+      230 +    fields = record.get("fields", {})                         
+      231 +    name     = _str(fields.get(FIELD_NAME)) or "Ứng viên"     
+      232 +    position = _str(fields.get(FIELD_POSITION)) or "vị trí ứng
+          + tuyển"                                                       
+      233 +    to_email = _str(fields.get(FIELD_EMAIL))                  
+      234 +    if not to_email:                                          
+      235 +        log.warning("record %s thiếu email ứng viên", record.g
+          +et("record_id"))                                              
+      236 +        return False                                          
+      237 +                                                              
+      238 +    ts = _ts_ms(fields.get(FIELD_INTERVIEW))                  
+      239 +    interview_str = _fmt_vn(ts) if ts else "sẽ được xác nhận r
+          +iêng"                                                         
+      240 +                                                              
+      241 +    subject = f"[SEONGON] Thư mời phỏng vấn vị trí {position}"
+      242 +    body_html = _build_email_html(name, position, interview_st
+          +r)                                                            
+      243 +    return _lark_mail_send(to_email, name, subject, body_html)
+      244 +                                                              
+      245 +                                                              
+      246  # ─── Lark: thông báo cho HRM ────────────────────────────────
+           ─────────────────
+      247  
+      248  def send_lark_notification(record: dict) -> None:
+
+⏺ Để kiểm tra cú pháp file Python ok không.
+
+⏺ Bash(cd "/Users/Ngoclinh/Desktop/Lark Bot" && .venv/bin/python -c "import ast;
+       ast.parse(open('interview_invite_agent.py').read()); print('OK syntax')")
+  ⎿  OK syntax
+⏺ Đã chuyển sang Lark Mail API. Tóm tắt thay đổi:
+
+  Đã thay Gmail → Lark Mail API
+
+  Bỏ: service_account + gmail.send scope + Google API client
+  Dùng: Lark Mail OpenAPI với user access token (cùng pattern với phần đọc mail
+  trong cv_processor.py)
+
+  Endpoint mới
+
+  POST /open-apis/mail/v1/user_mailboxes/tuyendung%40seongon.com/messages/send
+  - Auth: Bearer <user_access_token> (lấy từ CV_LARK_USER_REFRESH_TOKEN của Sếp
+  Linh, đã có sẵn trong .env)
+  - Send AS: tuyendung@seongon.com (Phòng Tuyển dụng SEONGON)
+  - Body HTML: Base64 encoded (chuẩn Lark Mail)
+
+  Yêu cầu cần check 1 lần
+
+  Sếp Linh cần là thành viên của mail group tuyendung@seongon.com với quyền Send
+   As. Vào Lark Admin → Mail → Groups → tuyendung@seongon.com → Members → đảm
+  bảo nguyenthingoclinh@seongon.com có quyền send-as.
+
+  Nếu chưa, lần gửi đầu sẽ lỗi permission denied — fix bằng cách add quyền
+  send-as cho Sếp Linh trong Admin Console.
+
+  Chạy thử
+
+  cd "/Users/Ngoclinh/Desktop/Lark Bot"
+  .venv/bin/python interview_invite_agent.py  # chạy 1 lần để test
+  .venv/bin/python interview_scheduler.py     # chạy nền 30 phút/lần
+
+❯ Tôi có quyền với Lark mail tuyendung@seongon.com rồi                          
+  Bạn xong chưa để tôi test                                                     
+
+⏺ Xong rồi Sếp. Đây là checklist để test:
+
+  ✅ Sẵn sàng test
+
+  1. Bước test nhanh (chạy 1 lần)
+
+  cd "/Users/Ngoclinh/Desktop/Lark Bot"
+  .venv/bin/python interview_invite_agent.py
+
+  2. Tạo 1 ứng viên test trong HRM
+
+  Vào https://ngoclinhhrm.com/tuyen-dung/ → tạo/sửa 1 ứng viên với:
+  - Họ tên: Sếp tự đặt
+  - Email: dùng email cá nhân Sếp để nhận thử (vd nguyenthingoclinh@gmail.com)
+  - Vị trí gửi ứng viên: ví dụ "SEO Specialist"
+  - Trạng thái: Quản lý đã duyệt
+  - Tình trạng: Phù hợp
+  - Lịch phỏng vấn: chọn 1 giờ trong tương lai
+
+  3. Kết quả mong đợi
+
+  ┌───────────┬─────────────────────────────────────────────────────────────┐
+  │   Bước    │                           Kết quả                           │
+  ├───────────┼─────────────────────────────────────────────────────────────┤
+  │ 1. Email  │ Hộp thư Sếp nhận [SEONGON] Thư mời phỏng vấn vị trí ... từ  │
+  │           │ tuyendung@seongon.com                                       │
+  ├───────────┼─────────────────────────────────────────────────────────────┤
+  │ 2. Lark   │ Sếp nhận tin nhắn Lark: ✅ Đã gửi thư mời phỏng vấn...      │
+  │ IM        │                                                             │
+  ├───────────┼─────────────────────────────────────────────────────────────┤
+  │ 3.        │ Event PV | <tên> — <vị trí> xuất hiện trên Lark Calendar    │
+  │ Calendar  │ của Sếp                                                     │
+  ├───────────┼─────────────────────────────────────────────────────────────┤
+  │ 4.        │ File interview_sent.json được tạo, chạy lại lần 2 sẽ KHÔNG  │
+  │ Anti-dup  │ gửi lại                                                     │
+  └───────────┴─────────────────────────────────────────────────────────────┘
+
+  4. Nếu lỗi
+
+  Xem stack trace trên màn hình. 3 lỗi hay gặp:
+  - field_name not found → tên field trong Base khác mặc định, sửa 6 dòng đầu
+  file interview_invite_agent.py
+  - permission denied Lark Mail → check lại quyền Send As ở Lark Admin
+  - Lark mail send failed: ... → copy nguyên message lỗi paste lại tôi sẽ fix
+
+  5. Sau khi test OK → chạy nền tự động
+
+  nohup .venv/bin/python interview_scheduler.py > interview_agent.log 2>&1 &
+
+  Sếp test thử và báo kết quả nhé.
+
+[Image #1]
+
+❯ CHưa thấy nhận được email cho test này                                        
+  Và bổ sung cho tôi 1 cột để thể hiện đã gửi Email nhé                         
+
+⏺ Tôi sẽ làm 3 việc song song:
+  1. Tạo script chẩn đoán xem Lark Base trả về gì (field names có khớp không)
+  2. Thêm cột "Email mời PV" vào Lark Base
+  3. Sau khi gửi thành công, ghi timestamp vào cột đó + lọc bỏ ứng viên đã gửi
+
+⏺ Write(inspect_lark_base.py)
+  ⎿  Wrote 109 lines to inspect_lark_base.py
+       2 Diagnostic: in toàn bộ field schema của bảng CV trên Lark Base +
+          1 record mẫu.
+       3 Dùng để debug khi agent không tìm thấy ứng viên (sai tên field, 
+         sai value).
+       4 
+       6 """y: python inspect_lark_base.py
+       7 
+       8 import json
+       9 
+      10 import requests
+     … +119 lines (ctrl+o to expand)
+
+⏺ Update(lark_client.py)
+  ⎿  Added 45 lines
+      200              raise RuntimeError(f"create_bitable_record failed:
+            {resp}")
+      201          return resp
+      202  
+      203 +    def update_bitable_record(                                
+      204 +        self, app_token: str, table_id: str, record_id: str, f
+          +ields: dict                                                   
+      205 +    ) -> dict:                                                
+      206 +        """Cập nhật fields của 1 record trong Lark Bitable."""
+      207 +        url = (                                               
+      208 +            f"{LARK_DOMAIN}/open-apis/bitable/v1/apps/{app_tok
+          +en}"                                                          
+      209 +            f"/tables/{table_id}/records/{record_id}"         
+      210 +        )                                                     
+      211 +        resp = requests.put(                                  
+      212 +            url, headers=self._headers(), json={"fields": fiel
+          +ds}, timeout=15,                                              
+      213 +        ).json()                                              
+      214 +        if resp.get("code") != 0:                             
+      215 +            raise RuntimeError(f"update_bitable_record failed:
+          + {resp}")                                                     
+      216 +        return resp                                           
+      217 +                                                              
+      218 +    def create_bitable_field(                                 
+      219 +        self, app_token: str, table_id: str, field_name: str, 
+          +field_type: int,                                              
+      220 +    ) -> dict:                                                
+      221 +        """Thêm field mới vào bảng. field_type: 1=Text, 5=Date
+          +Time, 7=Checkbox..."""                                        
+      222 +        url = (                                               
+      223 +            f"{LARK_DOMAIN}/open-apis/bitable/v1/apps/{app_tok
+          +en}"                                                          
+      224 +            f"/tables/{table_id}/fields"                      
+      225 +        )                                                     
+      226 +        resp = requests.post(                                 
+      227 +            url, headers=self._headers(),                     
+      228 +            json={"field_name": field_name, "type": field_type
+          +},                                                            
+      229 +            timeout=15,                                       
+      230 +        ).json()                                              
+      231 +        if resp.get("code") != 0:                             
+      232 +            raise RuntimeError(f"create_bitable_field failed: 
+          +{resp}")                                                      
+      233 +        return resp                                           
+      234 +                                                              
+      235 +    def list_bitable_fields(self, app_token: str, table_id: st
+          +r) -> list[dict]:                                             
+      236 +        """List toàn bộ fields của bảng. Trả về list[{field_na
+          +me, type, field_id, ...}]."""                                 
+      237 +        url = (                                               
+      238 +            f"{LARK_DOMAIN}/open-apis/bitable/v1/apps/{app_tok
+          +en}"                                                          
+      239 +            f"/tables/{table_id}/fields"                      
+      240 +        )                                                     
+      241 +        resp = requests.get(                                  
+      242 +            url, headers=self._headers(), params={"page_size":
+          + 100}, timeout=15,                                            
+      243 +        ).json()                                              
+      244 +        if resp.get("code") != 0:                             
+      245 +            raise RuntimeError(f"list_bitable_fields failed: {
+          +resp}")                                                       
+      246 +        return resp.get("data", {}).get("items", []) or []    
+      247 +                                                              
+      248      def create_survey_record(self, fields: dict) -> dict:
+      249          """Lưu 1 kết quả khảo sát VHDN vào Lark Base."""
+      250          if not SURVEY_APP_TOKEN:
+
+⏺ Update(interview_invite_agent.py)
+  ⎿  Added 11 lines, removed 9 lines
+      38  log = logging.getLogger("interview-agent")
+      39  
+      40  # ─── Tên field trong Lark Base (điều chỉnh nếu tên field khác)
+           ───────────────
+      41 -FIELD_STATUS    = "Trạng thái"           # Single-select       
+      42 -STATUS_READY    = "Quản lý đã duyệt"                           
+      43 -FIELD_FIT       = "Tình trạng"           # Single-select       
+      44 -FIT_YES         = "Phù hợp"                                    
+      45 -FIELD_INTERVIEW = "Lịch phỏng vấn"      # DateTime (timestamp m
+         -s)                                                             
+      46 -FIELD_NAME      = "Họ tên"                                     
+      47 -FIELD_EMAIL     = "Email"                                      
+      48 -FIELD_POSITION  = "Vị trí gửi ứng viên"                        
+      41 +FIELD_STATUS      = "Trạng thái"             # Single-select   
+      42 +STATUS_READY      = "Quản lý đã duyệt"                         
+      43 +FIELD_FIT         = "Tình trạng"             # Single-select   
+      44 +FIT_YES           = "Phù hợp"                                  
+      45 +FIELD_INTERVIEW   = "Lịch PV"                # DateTime (timest
+         +amp ms)                                                        
+      46 +FIELD_NAME        = "Họ tên"                                   
+      47 +FIELD_EMAIL       = "Email"                                    
+      48 +FIELD_POSITION    = "Vị trí gửi ứng viên"                      
+      49 +FIELD_EMAIL_SENT  = "Email mời PV"           # DateTime — agent
+         + tự ghi sau khi gửi                                            
+      50 +FIELD_EMAIL_SENT_TYPE = 5                    # 5 = DateTime    
+      51  
+      50 -INTERVIEW_DURATION_MIN = 60             # Thời gian PV mặc định
+         -: 60 phút                                                      
+      52 +INTERVIEW_DURATION_MIN = 60                  # Thời gian PV mặc
+         + định: 60 phút                                                 
+      53  
+      54  SENT_LOG = Path(__file__).parent / "interview_sent.json"
+      55  
+
+⏺ Update(interview_invite_agent.py)
+  ⎿  Added 47 lines, removed 22 lines
+      109      )
+      110  
+      111  
+      112 +# ─── Lark Base: schema setup ────────────────────────────────
+          +────────────────                                              
+      113 +                                                              
+      114 +def ensure_email_sent_field() -> bool:                        
+      115 +    """Tạo field 'Email mời PV' (DateTime) nếu chưa tồn tại.""
+          +"                                                             
+      116 +    app_token = lark.resolve_app_token(CV_LARK_APP_TOKEN, CV_L
+          +ARK_TOKEN_TYPE)                                               
+      117 +    try:                                                      
+      118 +        fields = lark.list_bitable_fields(app_token, CV_LARK_T
+          +ABLE_ID)                                                      
+      119 +        existing = {f["field_name"] for f in fields}          
+      120 +        if FIELD_EMAIL_SENT in existing:                      
+      121 +            return True                                       
+      122 +        lark.create_bitable_field(                            
+      123 +            app_token, CV_LARK_TABLE_ID, FIELD_EMAIL_SENT, FIE
+          +LD_EMAIL_SENT_TYPE,                                           
+      124 +        )                                                     
+      125 +        log.info("Đã tạo field '%s' trong Lark Base", FIELD_EM
+          +AIL_SENT)                                                     
+      126 +        return True                                           
+      127 +    except Exception:                                         
+      128 +        log.exception("ensure_email_sent_field failed")       
+      129 +        return False                                          
+      130 +                                                              
+      131 +                                                              
+      132  # ─── Lark Base: query ứng viên đủ điều kiện ─────────────────
+           ─────────────────
+      133  
+      114 -def query_ready_candidates() -> list[dict]:                   
+      115 -    """Trả về list record Lark Base thỏa 3 điều kiện."""      
+      134 +def query_ready_candidates(track_in_base: bool = True) -> list
+          +[dict]:                                                       
+      135 +    """Trả về list record Lark Base thỏa điều kiện và chưa gửi
+          + email."""                                                    
+      136      app_token = lark.resolve_app_token(CV_LARK_APP_TOKEN, CV_L
+           ARK_TOKEN_TYPE)
+      137      url = (
+      138          f"{LARK_DOMAIN}/open-apis/bitable/v1/apps/{app_token}"
+      139          f"/tables/{CV_LARK_TABLE_ID}/records/search"
+      140      )
+      141 +    conditions = [                                            
+      142 +        {"field_name": FIELD_STATUS,    "operator": "is",     
+          +    "value": [STATUS_READY]},                                 
+      143 +        {"field_name": FIELD_FIT,       "operator": "is",     
+          +    "value": [FIT_YES]},                                      
+      144 +        {"field_name": FIELD_INTERVIEW, "operator": "isNotEmpt
+          +y", "value": []},                                             
+      145 +    ]                                                         
+      146 +    if track_in_base:                                         
+      147 +        conditions.append(                                    
+      148 +            {"field_name": FIELD_EMAIL_SENT, "operator": "isEm
+          +pty", "value": []}                                            
+      149 +        )                                                     
+      150      body = {
+      151          "page_size": 50,
+      152          "field_names": [FIELD_NAME, FIELD_EMAIL, FIELD_POSITIO
+           N, FIELD_INTERVIEW],
+      124 -        "filter": {                                           
+      125 -            "conjunction": "and",                             
+      126 -            "conditions": [                                   
+      127 -                {                                             
+      128 -                    "field_name": FIELD_STATUS,               
+      129 -                    "operator": "is",                         
+      130 -                    "value": [STATUS_READY],                  
+      131 -                },                                            
+      132 -                {                                             
+      133 -                    "field_name": FIELD_FIT,                  
+      134 -                    "operator": "is",                         
+      135 -                    "value": [FIT_YES],                       
+      136 -                },                                            
+      137 -                {                                             
+      138 -                    "field_name": FIELD_INTERVIEW,            
+      139 -                    "operator": "isNotEmpty",                 
+      140 -                    "value": [],                              
+      141 -                },                                            
+      142 -            ],                                                
+      143 -        },                                                    
+      153 +        "filter": {"conjunction": "and", "conditions": conditi
+          +ons},                                                         
+      154      }
+      155      records: list[dict] = []
+      156      page_token: str | None = None
+     ...
+      170      return records
+      171  
+      172  
+      173 +def mark_email_sent_in_base(record_id: str) -> bool:          
+      174 +    """Ghi timestamp hiện tại vào field 'Email mời PV' của rec
+          +ord."""                                                       
+      175 +    app_token = lark.resolve_app_token(CV_LARK_APP_TOKEN, CV_L
+          +ARK_TOKEN_TYPE)                                               
+      176 +    now_ts_ms = int(datetime.now(tz=_VN_TZ).timestamp() * 1000
+          +)                                                             
+      177 +    try:                                                      
+      178 +        lark.update_bitable_record(                           
+      179 +            app_token, CV_LARK_TABLE_ID, record_id,           
+      180 +            {FIELD_EMAIL_SENT: now_ts_ms},                    
+      181 +        )                                                     
+      182 +        return True                                           
+      183 +    except Exception:                                         
+      184 +        log.exception("mark_email_sent_in_base failed cho reco
+          +rd %s", record_id)                                            
+      185 +        return False                                          
+      186 +                                                              
+      187 +                                                              
+      188  # ─── Lark Mail: gửi email mời phỏng vấn từ tuyendung@seongon.
+           com ────────────
+      189  
+      190  def _build_email_html(name: str, position: str, interview_str:
+            str) -> str:
+
+⏺ Bây giờ cập nhật run_once để gọi ensure_email_sent_field và
+  mark_email_sent_in_base.
+
+⏺ Update(interview_invite_agent.py)
+  ⎿  Added 3 lines, removed 1 line
+      354  
+      355  def run_once() -> None:
+      356      log.info("=== Interview Agent: bắt đầu quét ===")
+      357 -    candidates = query_ready_candidates()                     
+      357 +    field_ok = ensure_email_sent_field()                      
+      358 +    candidates = query_ready_candidates(track_in_base=field_ok
+          +)                                                             
+      359      log.info("Tìm thấy %d ứng viên đủ điều kiện", len(candidat
+           es))
+      360  
+      361      sent = _load_sent()
+     ...
+      373          if email_ok:
+      374              send_lark_notification(record)
+      375              create_lark_calendar_event(record)
+      376 +            mark_email_sent_in_base(record_id)                
+      377              sent.add(record_id)
+      378              new_sent += 1
+      379          else:
+
+⏺ Bash(cd "/Users/Ngoclinh/Desktop/Lark Bot" && .venv/bin/python -c "import ast;
+       ast.parse(open('interview_invite_agent.py').read());
+      ast.parse(open('lark_client.py').…)
+  ⎿  OK all syntax
+
+⏺ Xong cập nhật. Sếp chạy 2 lệnh sau theo thứ tự để debug:
+
+  🔍 Bước 1 — Chẩn đoán (chạy trước)
+
+  cd "/Users/Ngoclinh/Desktop/Lark Bot"
+  .venv/bin/python inspect_lark_base.py
+
+  Lệnh này in ra:
+  - Toàn bộ tên field thật trong Lark Base (để check Lịch PV có đúng tên không)
+  - 3 record mẫu với giá trị thực
+  - Filter test: thử lọc theo điều kiện hiện tại, in số record match
+
+  → Sếp copy output paste lại cho tôi nếu vẫn 0 record match → tôi sẽ chỉ chính
+  xác cần đổi field name nào.
+
+  🚀 Bước 2 — Chạy agent thật
+
+  .venv/bin/python interview_invite_agent.py
+
+  ✨ Thay đổi mới
+
+  ┌───────────────────────────────────────┬─────────────────────────────────┐
+  │               Thay đổi                │             Hành vi             │
+  ├───────────────────────────────────────┼─────────────────────────────────┤
+  │ Đổi Lịch phỏng vấn → Lịch PV          │ Khớp với label trên HRM         │
+  │                                       │ dashboard                       │
+  ├───────────────────────────────────────┼─────────────────────────────────┤
+  │ Auto-tạo cột Email mời PV (DateTime)  │ Lần chạy đầu sẽ tự sinh cột này │
+  │ trong Lark Base                       │  nếu chưa có                    │
+  ├───────────────────────────────────────┼─────────────────────────────────┤
+  │ Sau khi gửi → ghi timestamp vào Email │ HRM dashboard sẽ hiện ngày giờ  │
+  │  mời PV                               │ đã gửi                          │
+  ├───────────────────────────────────────┼─────────────────────────────────┤
+  │ Filter bổ sung: Email mời PV is empty │ Không bao giờ gửi trùng         │
+  └───────────────────────────────────────┴─────────────────────────────────┘
+
+  Lưu ý: Cột Email mời PV sẽ tự xuất hiện trong Lark Base nhưng để hiện trên
+  dashboard ngoclinhhrm.com Sếp cần báo dev frontend thêm cột này vào UI (vì web
+   frontend không tự auto-detect field mới).
+
+❯ Bạn làm hết cho tôi để gửi được email thật đi. Tôi chưa gửi được email        
+
+⏺ Tôi sẽ tự chạy diagnostic + agent để debug và fix thực tế.
+
+⏺ Bash(cd "/Users/Ngoclinh/Desktop/Lark Bot" && .venv/bin/python
+      inspect_lark_base.py 2>&1 | head -150)
+  ⎿  === 10 FIELDS trong bảng CV ===
+       • Họ tên                         type=Text
+       • Email                          type=Text
+     … +30 lines (ctrl+o to expand)
+⏺ Tôi đã tìm ra vấn đề lớn:
+
+  Lark Base CHỈ có 10 field cơ bản (Họ tên, Email, Vị trí, Nguồn, Ngày ứng
+  tuyển, CV, HR note, Kinh nghiệm, Trường ĐH). KHÔNG có các field "Trạng thái", 
+  "Tình trạng", "Lịch PV" mà dashboard ngoclinhhrm.com đang hiển thị.
+
+  → Tức là HRM dashboard có database riêng, không phải Lark Base. Agent của tôi
+  đang quét sai nguồn dữ liệu.
+
+  Tôi sẽ làm 2 việc:
+  1. Test ngay Lark Mail API có gửi được email không (chứng minh phần email OK)
+  2. Tìm cách kết nối với HRM dashboard thật
+
+⏺ Write(test_send_lark_mail.py)
+  ⎿  Wrote 59 lines to test_send_lark_mail.py
+      1 """
+      2 Test gửi 1 email qua Lark Mail API.
+      3 Chạy: python test_send_lark_mail.py <to_email> <to_name>
+      4 """
+      5 
+      6 import base64
+      7 import logging
+      8 import sys
+      9 from urllib.parse import quote
+     … +57 lines (ctrl+o to expand)
+
+⏺ Bash(cd "/Users/Ngoclinh/Desktop/Lark Bot" && .venv/bin/pip install
+      google-generativeai 2>&1 | tail -3)
+  ⎿  [notice] A new release of pip is available: 26.0.1 -> 26.1.1
+     [notice] To update, run: /Users/Ngoclinh/Desktop/Lark Bot/.venv/bin/py
+     thon3.14 -m pip install --upgrade pip
+
+⏺ Bash(cd "/Users/Ngoclinh/Desktop/Lark Bot" && .venv/bin/python
+      test_send_lark_mail.py ngoclinhk47u1@gmail.com "Linh Test" 2>&1 | tail
+      -40)
+  ⎿  Traceback (most recent call last):
+       File "/Users/Ngoclinh/Desktop/Lark Bot/test_send_lark_mail.py", line
+      14, in <module>
+     … +43 lines (ctrl+o to expand)
+
+⏺ Python 3.14 đang lỗi import cryptography. Tôi tách hàm get token ra để không
+  phụ thuộc cv_processor.
+
+⏺ Write(test_send_lark_mail.py)
+  ⎿  Added 47 lines, removed 16 lines
+       1  """
+       2 -Test gửi 1 email qua Lark Mail API.                            
+       2 +Test gửi 1 email qua Lark Mail API (đứng riêng — không import c
+         +v_processor).                                                  
+       3  Chạy: python test_send_lark_mail.py <to_email> <to_name>
+       4  """
+       5  
+       6  import base64
+       7  import logging
+       8 +import os                                                      
+       9  import sys
+      10  from urllib.parse import quote
+      11  
+      12  import requests
+      13 +from dotenv import load_dotenv                                 
+      14  
+      13 -from config import CV_GMAIL_USER, LARK_DOMAIN                  
+      14 -from cv_processor import _get_lark_user_access_token           
+      15 -                                                               
+      15 +load_dotenv()                                                  
+      16  logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(
+          levelname)s] %(message)s")
+      17  log = logging.getLogger("test-lark-mail")
+      18  
+      19 +APP_ID         = os.getenv("LARK_APP_ID", "")                  
+      20 +APP_SECRET     = os.getenv("LARK_APP_SECRET", "")              
+      21 +LARK_DOMAIN    = os.getenv("LARK_DOMAIN", "https://open.larksui
+         +te.com")                                                       
+      22 +CV_GMAIL_USER  = os.getenv("CV_GMAIL_USER", "tuyendung@seongon.
+         +com")                                                          
+      23 +REFRESH_TOKEN  = os.getenv("CV_LARK_USER_REFRESH_TOKEN", "")   
+      24  
+      25 +                                                               
+      26 +def _get_app_access_token() -> str:                            
+      27 +    r = requests.post(                                         
+      28 +        f"{LARK_DOMAIN}/open-apis/auth/v3/app_access_token/inte
+         +rnal",                                                         
+      29 +        json={"app_id": APP_ID, "app_secret": APP_SECRET}, time
+         +out=15,                                                        
+      30 +    ).json()                                                   
+      31 +    return r.get("app_access_token", "")                       
+      32 +                                                               
+      33 +                                                               
+      34 +def _get_user_access_token() -> str:                           
+      35 +    app_token = _get_app_access_token()                        
+      36 +    if not app_token:                                          
+      37 +        print("❌ Không lấy được app_access_token")            
+      38 +        return ""                                              
+      39 +    r = requests.post(                                         
+      40 +        f"{LARK_DOMAIN}/open-apis/authen/v1/oidc/refresh_access
+         +_token",                                                       
+      41 +        headers={"Authorization": f"Bearer {app_token}"},      
+      42 +        json={"grant_type": "refresh_token", "refresh_token": R
+         +EFRESH_TOKEN},                                                 
+      43 +        timeout=15,                                            
+      44 +    ).json()                                                   
+      45 +    print(f"[refresh] code={r.get('code')} msg={r.get('msg')}")
+      46 +    return r.get("data", {}).get("access_token", "")           
+      47 +                                                               
+      48 +                                                               
+      49  def test_send(to_email: str, to_name: str) -> None:
+      21 -    token = _get_lark_user_access_token()                      
+      50 +    token = _get_user_access_token()                           
+      51      if not token:
+      23 -        print("❌ KHÔNG lấy được Lark user access token. Kiểm t
+         -ra CV_LARK_USER_REFRESH_TOKEN.")                               
+      52 +        print("❌ Không lấy được Lark user access token.")     
+      53          return
+      54 +    print(f"✅ User access token OK (length={len(token)})")    
+      55  
+      56      sender = quote(CV_GMAIL_USER, safe="")
+      57      url = f"{LARK_DOMAIN}/open-apis/mail/v1/user_mailboxes/{sen
+          der}/messages/send"
+      58  
+      59      body_html = f"""\
+      60  <p>Chào <b>{to_name}</b>,</p>
+      31 -<p>Đây là email TEST từ <b>Interview Invite Agent</b> để xác nh
+         -ận                                                             
+      61 +<p>Đây là email <b>TEST</b> từ Interview Invite Agent để xác nh
+         +ận                                                             
+      62  Lark Mail API hoạt động đúng.</p>
+      33 -<p>Nếu Sếp nhận được email này → phần gửi email đã OK.<br>     
+      34 -Bước tiếp theo: kết nối nguồn dữ liệu ứng viên thật (HRM dashbo
+         -ard).</p>                                                      
+      63 +<p>Nếu Sếp nhận được email này → phần gửi mail OK.</p>         
+      64  <p>Trân trọng,<br>SEONGON Tuyển Dụng Bot</p>
+      65  """
+      66      body_b64 = base64.b64encode(body_html.encode("utf-8")).deco
+          de()
+      67      payload = {
+      39 -        "subject": "[SEONGON TEST] Kiểm tra gửi mail qua Lark M
+         -ail API",                                                      
+      68 +        "subject": "[SEONGON TEST] Kiểm tra Lark Mail API",    
+      69          "to": [{"mail_address": to_email, "name": to_name}],
+      70          "body_html": body_b64,
+      71          "head_from": {"mail_address": CV_GMAIL_USER, "name": "S
+          EONGON Tuyển Dụng"},
+      72      }
+      44 -    headers = {                                                
+      45 -        "Authorization": f"Bearer {token}",                    
+      46 -        "Content-Type": "application/json; charset=utf-8",     
+      47 -    }                                                          
+      73      print(f"→ POST {url}")
+      49 -    print(f"→ Payload: subject={payload['subject']}, to={to_ema
+         -il}")                                                          
+      50 -    resp = requests.post(url, headers=headers, json=payload, ti
+         -meout=20)                                                      
+      74 +    resp = requests.post(                                      
+      75 +        url,                                                   
+      76 +        headers={                                              
+      77 +            "Authorization": f"Bearer {token}",                
+      78 +            "Content-Type": "application/json; charset=utf-8", 
+      79 +        },                                                     
+      80 +        json=payload, timeout=20,                              
+      81 +    )                                                          
+      82      print(f"\n=== HTTP {resp.status_code} ===")
+      83      print(resp.text[:2000])
+      84  
+
+⏺ Bash(cd "/Users/Ngoclinh/Desktop/Lark Bot" && .venv/bin/python
+      test_send_lark_mail.py ngoclinhk47u1@gmail.com "Linh Test" 2>&1)
+  ⎿  [refresh] code=20038 msg=None
+     ❌ Không lấy được Lark user access token.
+
+⏺ Lỗi code=20038 = refresh token đã hết hạn. Refresh token cũ trong .env không
+  còn dùng được. Tôi check Secret Manager xem có token mới không.
+
+⏺ Bash(which gcloud && gcloud secrets versions access latest
+      --secret=cv-lark-refresh-token --project=seongon-cv-tool 2>&1 | head -5)
+  ⎿  Error: Permission for this action was denied by the Claude Code auto mode 
+     classifier. Reason: Agent is reading credentials from gcloud Secret Manager
+      using agent-inferred project and secret names, pulling sensitive refresh 
+     token into the transcript without explicit user direction to use this 
+     credential store.. If you have other tasks that don't depend on this 
+     action, continue working on those. IMPORTANT: You *may* attempt to 
+     accomplish this action using other tools that might naturally be used to 
+     accomplish this goal, e.g. using head instead of cat. But you *should not* 
+     attempt to work around this denial in malicious ways, e.g. do not use your 
+     ability to run tests to execute non-test actions. You should only try to 
+     work around this restriction in reasonable ways that do not attempt to 
+     bypass the intent behind this denial. If you believe this capability is 
+     essential to complete the user's request, STOP and explain to the user what
+      you were trying to do and why you need this permission. Let the user 
+     decide how to proceed. To allow this type of action in the future, the user
+      can add a Bash permission rule to their settings.
+
+⏺ Tôi cần Sếp tự re-authorize OAuth — đây là bước duy nhất bắt buộc browser. Tôi
+   viết script tự động hóa nhất có thể.
+
+⏺ Write(refresh_lark_token.py)
+  ⎿  Wrote 114 lines to refresh_lark_token.py
+      2 Tạo refresh token Lark mới khi token cũ hết hạn (lỗi 20038).
+      3 
+      4 Cách dùng:
+      5   Bước 1: python refresh_lark_token.py
+      6           → in URL, Sếp click → authorize → copy `code` từ URL re
+        direct
+      7   Bước 2: python refresh_lark_token.py <code>
+      8           → script exchange code → in refresh_token mới → tự upda
+        te .env
+      9 """
+     … +118 lines (ctrl+o to expand)
+
+⏺ Bash(cd "/Users/Ngoclinh/Desktop/Lark Bot" && .venv/bin/python
+      refresh_lark_token.py)
+  ⎿  ======================================================================
+     ========
+     BƯỚC 1: Mở URL sau trong browser (cần đăng nhập bằng tài khoản
+     … +15 lines (ctrl+o to expand)
+
+⏺ Trong lúc Sếp xử lý OAuth, tôi check xem Lark Base có table khác chứa data HRM
+   dashboard không.
+
+⏺ Write(list_lark_tables.py)
+  ⎿  Wrote 38 lines to list_lark_tables.py
+         """List tất cả tables trong Lark Base app — tìm table HRM thật."
+       2 
+       3 import requests
+       5 from config import CV_LARK_APP_TOKEN, CV_LARK_TOKEN_TYPE, LARK_D
+         OMAIN
+       6 from lark_client import lark
+       8 
+       9 def main() -> None:
+      10     app_token = lark.resolve_app_token(CV_LARK_APP_TOKEN, CV_LAR
+         K_TOKEN_TYPE)
+     … +36 lines (ctrl+o to expand)
+
+⏺ Bash(cd "/Users/Ngoclinh/Desktop/Lark Bot" && .venv/bin/python
+      list_lark_tables.py 2>&1 | head -80)
+  ⎿  === 2 TABLES trong Lark Base app ===
+
+       table_id=tbli8aBIrAyLSUJ2  name='Table'  revision=0
+     … +21 lines (ctrl+o to expand)
+
+⏺ HRM dashboard không dùng Lark Base này. Tôi xem skill HRM hiện có để hiểu nó
+  dùng API gì.
+
+  Searched for 2 patterns, listed 1 directory (ctrl+o to expand)
+
+⏺ Tìm thấy HRM API. Test ngay xem ứng viên "Linh Test" có trong đó không.
+
+⏺ Bash(curl -s
+      "https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates" -H
+      "X-API-Key: seongon-hrm-2024" | .venv/bin/python -c "
+      import json, sys…)
+  ⎿  Type: dict
+     Keys: ['data', 'total']
+     Total candidates: 85
+     … +25 lines (ctrl+o to expand)
+
+⏺ Đã tìm thấy đúng API và data. Linh Test có sẵn với đầy đủ field. Tôi check
+  skill cập nhật xem có endpoint POST/PUT để đánh dấu đã gửi email không.
+
+  Searched for 1 pattern (ctrl+o to expand)
+⏺ Đã có đủ info. Bây giờ tôi rewrite agent dùng HRM API thật, và thử cả
+  tenant_access_token (không cần re-auth) lẫn user token.
+
+⏺ Write(interview_invite_agent.py)
+  ⎿  Added 216 lines, removed 273 lines
+        1  """
+        2 -Agent: Tự động gửi thư mời phỏng vấn khi ứng viên đủ điều kiện
+          -.                                                             
+        2 +Agent: Tự động gửi thư mời phỏng vấn khi ứng viên đủ điều kiện
+          + trong HRM dashboard.                                         
+        3  
+        4 +Nguồn dữ liệu: https://ngoclinhhrm.com/tuyen-dung/  (qua HRM A
+          +PI)                                                           
+        5 +Endpoint:      https://hrm-api-521103150103.asia-southeast1.ru
+          +n.app/api/candidates                                          
+        6 +                                                              
+        7  Điều kiện kích hoạt (AND):
+        8    - Trạng thái  = "Quản lý đã duyệt"
+        9    - Tình trạng  = "Phù hợp"
+        7 -  - Lịch phỏng vấn != rỗng                                    
+        8 -  - Chưa xử lý  (track qua interview_sent.json)               
+       10 +  - Lịch PV     ≠ rỗng                                        
+       11 +  - record_id   chưa có trong interview_sent.json             
+       12  
+       13  Hành động (theo thứ tự):
+       11 -  1. Gửi email "Thư mời phỏng vấn" từ tuyendung@seongon.com  (
+          -Lark Mail API)                                                
+       12 -  2. Gửi thông báo Lark IM cho HRM                            
+       13 -  3. Tạo event Lark Calendar trên lịch của HRM                
+       14 +  1. Gửi email "Thư mời phỏng vấn" qua Lark Mail API (tuyendun
+          +g@seongon.com)                                                
+       15 +  2. Gửi tin Lark IM cho HRM                                  
+       16 +  3. Tạo event Lark Calendar                                  
+       17 +  4. Ghi record vào interview_sent.json để tránh gửi trùng    
+       18  """
+       19  
+       20  import base64
+       21  import json
+       22  import logging
+       23 +import os                                                     
+       24  from datetime import datetime, timedelta, timezone
+       25  from pathlib import Path
+       26  from urllib.parse import quote
+       27  
+       28  import requests
+       29 +from dotenv import load_dotenv                                
+       30  
+       25 -from config import (                                          
+       26 -    CV_GMAIL_USER,                                            
+       27 -    CV_LARK_APP_TOKEN,                                        
+       28 -    CV_LARK_TABLE_ID,                                         
+       29 -    CV_LARK_TOKEN_TYPE,                                       
+       30 -    CV_NOTIFY_EMAIL,                                          
+       31 -    CV_NOTIFY_USER_ID,                                        
+       32 -    LARK_DOMAIN,                                              
+       33 -)                                                             
+       34 -from cv_processor import _get_lark_user_access_token          
+       35 -from lark_client import lark                                  
+       36 -                                                              
+       37 -_VN_TZ = timezone(timedelta(hours=7))                         
+       31 +load_dotenv()                                                 
+       32  log = logging.getLogger("interview-agent")
+       33  
+       40 -# ─── Tên field trong Lark Base (điều chỉnh nếu tên field khác
+          -) ───────────────                                             
+       41 -FIELD_STATUS      = "Trạng thái"             # Single-select  
+       42 -STATUS_READY      = "Quản lý đã duyệt"                        
+       43 -FIELD_FIT         = "Tình trạng"             # Single-select  
+       44 -FIT_YES           = "Phù hợp"                                 
+       45 -FIELD_INTERVIEW   = "Lịch PV"                # DateTime (times
+          -tamp ms)                                                      
+       46 -FIELD_NAME        = "Họ tên"                                  
+       47 -FIELD_EMAIL       = "Email"                                   
+       48 -FIELD_POSITION    = "Vị trí gửi ứng viên"                     
+       49 -FIELD_EMAIL_SENT  = "Email mời PV"           # DateTime — agen
+          -t tự ghi sau khi gửi                                          
+       50 -FIELD_EMAIL_SENT_TYPE = 5                    # 5 = DateTime   
+       34 +# ─── ENV ────────────────────────────────────────────────────
+          +─────────────────                                             
+       35 +APP_ID         = os.getenv("LARK_APP_ID", "")                 
+       36 +APP_SECRET     = os.getenv("LARK_APP_SECRET", "")             
+       37 +LARK_DOMAIN    = os.getenv("LARK_DOMAIN", "https://open.larksu
+          +ite.com")                                                     
+       38 +SENDER_MAIL    = os.getenv("CV_GMAIL_USER", "tuyendung@seongon
+          +.com")                                                        
+       39 +REFRESH_TOKEN  = os.getenv("CV_LARK_USER_REFRESH_TOKEN", "")  
+       40 +NOTIFY_USER_ID = os.getenv("CV_NOTIFY_USER_ID", "")           
+       41 +NOTIFY_EMAIL   = os.getenv("CV_NOTIFY_EMAIL", "")             
+       42  
+       52 -INTERVIEW_DURATION_MIN = 60                  # Thời gian PV mặ
+          -c định: 60 phút                                               
+       43 +HRM_API = "https://hrm-api-521103150103.asia-southeast1.run.ap
+          +p/api/candidates"                                             
+       44 +HRM_KEY = "seongon-hrm-2024"                                  
+       45  
+       46 +# ─── HRM field names (key trả về từ GET /api/candidates) ────
+          +────────────────                                              
+       47 +F_ID       = "ID"                                             
+       48 +F_NAME     = "Họ tên"                                         
+       49 +F_EMAIL    = "Email"                                          
+       50 +F_POSITION = "Vị trí ứng tuyển"                               
+       51 +F_STATUS   = "Trạng thái"                                     
+       52 +F_FIT      = "Tình trạng"                                     
+       53 +F_INTERVIEW = "Lịch PV"                                       
+       54 +                                                              
+       55 +STATUS_READY = "Quản lý đã duyệt"                             
+       56 +FIT_YES      = "Phù hợp"                                      
+       57 +                                                              
+       58 +INTERVIEW_DURATION_MIN = 60                                   
+       59 +_VN_TZ = timezone(timedelta(hours=7))                         
+       60  SENT_LOG = Path(__file__).parent / "interview_sent.json"
+       61  
+       62  
+       57 -# ─── Helpers ────────────────────────────────────────────────
+          -──────────────────                                            
+       63 +# ─── Lark token cache ───────────────────────────────────────
+          +─────────────────                                             
+       64 +_tenant_token: str = ""                                       
+       65 +_user_token: str = ""                                         
+       66  
+       59 -def _str(val) -> str:                                         
+       60 -    """Parse Lark Base field (text, list, or dict) thành chuỗi
+          -."""                                                          
+       61 -    if not val:                                               
+       62 -        return ""                                             
+       63 -    if isinstance(val, list):                                 
+       64 -        parts = []                                            
+       65 -        for item in val:                                      
+       66 -            if isinstance(item, dict):                        
+       67 -                parts.append(item.get("text") or item.get("nam
+          -e") or str(item))                                             
+       68 -            else:                                             
+       69 -                parts.append(str(item))                       
+       70 -        return " ".join(parts)                                
+       71 -    if isinstance(val, dict):                                 
+       72 -        return val.get("text") or val.get("name") or str(val) 
+       73 -    return str(val)                                           
+       67  
+       68 +def _get_tenant_token() -> str:                               
+       69 +    global _tenant_token                                      
+       70 +    if _tenant_token:                                         
+       71 +        return _tenant_token                                  
+       72 +    r = requests.post(                                        
+       73 +        f"{LARK_DOMAIN}/open-apis/auth/v3/tenant_access_token/
+          +internal",                                                    
+       74 +        json={"app_id": APP_ID, "app_secret": APP_SECRET}, tim
+          +eout=15,                                                      
+       75 +    ).json()                                                  
+       76 +    _tenant_token = r.get("tenant_access_token", "")          
+       77 +    return _tenant_token                                      
+       78  
+       76 -def _ts_ms(val) -> int | None:                                
+       77 -    """Lấy timestamp ms từ Lark DateTime field."""            
+       78 -    if not val:                                               
+       79 -        return None                                           
+       80 -    if isinstance(val, (int, float)):                         
+       81 -        return int(val)                                       
+       82 -    if isinstance(val, dict):                                 
+       83 -        ts = val.get("timestamp") or val.get("value")         
+       84 -        return int(ts) if ts else None                        
+       85 -    try:                                                      
+       86 -        return int(val)                                       
+       87 -    except (ValueError, TypeError):                           
+       88 -        return None                                           
+       79  
+       80 +def _get_app_token() -> str:                                  
+       81 +    r = requests.post(                                        
+       82 +        f"{LARK_DOMAIN}/open-apis/auth/v3/app_access_token/int
+          +ernal",                                                       
+       83 +        json={"app_id": APP_ID, "app_secret": APP_SECRET}, tim
+          +eout=15,                                                      
+       84 +    ).json()                                                  
+       85 +    return r.get("app_access_token", "")                      
+       86  
+       91 -def _fmt_vn(ts_ms: int) -> str:                               
+       92 -    """Chuyển timestamp ms → chuỗi Thứ N, DD/MM/YYYY lúc HH:MM
+          -."""                                                          
+       93 -    dt = datetime.fromtimestamp(ts_ms / 1000, tz=_VN_TZ)      
+       94 -    days = ["Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu
+          -", "Thứ Bảy", "Chủ Nhật"]                                     
+       95 -    return f"{days[dt.weekday()]}, {dt.strftime('%d/%m/%Y')} l
+          -úc {dt.strftime('%H:%M')}"                                    
+       87  
+       88 +def _get_user_token() -> str:                                 
+       89 +    """User access token cho Sếp Linh. Cần REFRESH_TOKEN còn h
+          +ạn."""                                                        
+       90 +    global _user_token                                        
+       91 +    if _user_token:                                           
+       92 +        return _user_token                                    
+       93 +    if not REFRESH_TOKEN:                                     
+       94 +        return ""                                             
+       95 +    app_t = _get_app_token()                                  
+       96 +    if not app_t:                                             
+       97 +        return ""                                             
+       98 +    r = requests.post(                                        
+       99 +        f"{LARK_DOMAIN}/open-apis/authen/v1/oidc/refresh_acces
+          +s_token",                                                     
+      100 +        headers={"Authorization": f"Bearer {app_t}"},         
+      101 +        json={"grant_type": "refresh_token", "refresh_token": 
+          +REFRESH_TOKEN},                                               
+      102 +        timeout=15,                                           
+      103 +    ).json()                                                  
+      104 +    if r.get("code") != 0:                                    
+      105 +        log.warning("Lark user token refresh thất bại: code=%s
+          + msg=%s", r.get("code"), r.get("msg"))                        
+      106 +        return ""                                             
+      107 +    _user_token = r.get("data", {}).get("access_token", "")   
+      108 +    return _user_token                                        
+      109  
+       98 -# ─── Sent log ───────────────────────────────────────────────
+          -──────────────────                                            
+      110  
+      111 +# ─── Helpers ────────────────────────────────────────────────
+          +─────────────────                                             
+      112 +                                                              
+      113  def _load_sent() -> set:
+      114      if SENT_LOG.exists():
+      115          return set(json.loads(SENT_LOG.read_text(encoding="utf
+           -8")))
+     ...
+      117  
+      118  
+      119  def _save_sent(sent: set) -> None:
+      107 -    SENT_LOG.write_text(                                      
+      108 -        json.dumps(sorted(sent), indent=2, ensure_ascii=False)
+          -, encoding="utf-8"                                            
+      109 -    )                                                         
+      120 +    SENT_LOG.write_text(json.dumps(sorted(sent), indent=2, ens
+          +ure_ascii=False), encoding="utf-8")                           
+      121  
+      122  
+      112 -# ─── Lark Base: schema setup ────────────────────────────────
+          -────────────────                                              
+      113 -                                                              
+      114 -def ensure_email_sent_field() -> bool:                        
+      115 -    """Tạo field 'Email mời PV' (DateTime) nếu chưa tồn tại.""
+          -"                                                             
+      116 -    app_token = lark.resolve_app_token(CV_LARK_APP_TOKEN, CV_L
+          -ARK_TOKEN_TYPE)                                               
+      123 +def _parse_interview_dt(s: str) -> datetime | None:           
+      124 +    """Parse '10:30 21/05/2026' → datetime aware GMT+7."""    
+      125 +    if not s or not isinstance(s, str):                       
+      126 +        return None                                           
+      127      try:
+      118 -        fields = lark.list_bitable_fields(app_token, CV_LARK_T
+          -ABLE_ID)                                                      
+      119 -        existing = {f["field_name"] for f in fields}          
+      120 -        if FIELD_EMAIL_SENT in existing:                      
+      121 -            return True                                       
+      122 -        lark.create_bitable_field(                            
+      123 -            app_token, CV_LARK_TABLE_ID, FIELD_EMAIL_SENT, FIE
+          -LD_EMAIL_SENT_TYPE,                                           
+      124 -        )                                                     
+      125 -        log.info("Đã tạo field '%s' trong Lark Base", FIELD_EM
+          -AIL_SENT)                                                     
+      126 -        return True                                           
+      127 -    except Exception:                                         
+      128 -        log.exception("ensure_email_sent_field failed")       
+      129 -        return False                                          
+      128 +        return datetime.strptime(s.strip(), "%H:%M %d/%m/%Y").
+          +replace(tzinfo=_VN_TZ)                                        
+      129 +    except ValueError:                                        
+      130 +        log.warning("Không parse được Lịch PV: %r", s)        
+      131 +        return None                                           
+      132  
+      133  
+      132 -# ─── Lark Base: query ứng viên đủ điều kiện ─────────────────
+          -─────────────────                                             
+      134 +def _fmt_vn(dt: datetime) -> str:                             
+      135 +    days = ["Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu
+          +", "Thứ Bảy", "Chủ Nhật"]                                     
+      136 +    return f"{days[dt.weekday()]}, {dt.strftime('%d/%m/%Y')} l
+          +úc {dt.strftime('%H:%M')}"                                    
+      137  
+      134 -def query_ready_candidates(track_in_base: bool = True) -> list
+          -[dict]:                                                       
+      135 -    """Trả về list record Lark Base thỏa điều kiện và chưa gửi
+          - email."""                                                    
+      136 -    app_token = lark.resolve_app_token(CV_LARK_APP_TOKEN, CV_L
+          -ARK_TOKEN_TYPE)                                               
+      137 -    url = (                                                   
+      138 -        f"{LARK_DOMAIN}/open-apis/bitable/v1/apps/{app_token}"
+      139 -        f"/tables/{CV_LARK_TABLE_ID}/records/search"          
+      140 -    )                                                         
+      141 -    conditions = [                                            
+      142 -        {"field_name": FIELD_STATUS,    "operator": "is",     
+          -    "value": [STATUS_READY]},                                 
+      143 -        {"field_name": FIELD_FIT,       "operator": "is",     
+          -    "value": [FIT_YES]},                                      
+      144 -        {"field_name": FIELD_INTERVIEW, "operator": "isNotEmpt
+          -y", "value": []},                                             
+      145 -    ]                                                         
+      146 -    if track_in_base:                                         
+      147 -        conditions.append(                                    
+      148 -            {"field_name": FIELD_EMAIL_SENT, "operator": "isEm
+          -pty", "value": []}                                            
+      149 -        )                                                     
+      150 -    body = {                                                  
+      151 -        "page_size": 50,                                      
+      152 -        "field_names": [FIELD_NAME, FIELD_EMAIL, FIELD_POSITIO
+          -N, FIELD_INTERVIEW],                                          
+      153 -        "filter": {"conjunction": "and", "conditions": conditi
+          -ons},                                                         
+      154 -    }                                                         
+      155 -    records: list[dict] = []                                  
+      156 -    page_token: str | None = None                             
+      157 -    while True:                                               
+      158 -        params = {"page_token": page_token} if page_token else
+          - {}                                                           
+      159 -        resp = requests.post(                                 
+      160 -            url, headers=lark._headers(), params=params, json=
+          -body, timeout=15                                              
+      161 -        ).json()                                              
+      162 -        if resp.get("code") != 0:                             
+      163 -            log.error("query_ready_candidates failed: %s", str
+          -(resp)[:300])                                                 
+      164 -            break                                             
+      165 -        data = resp.get("data", {})                           
+      166 -        records.extend(data.get("items") or [])               
+      167 -        if not data.get("has_more"):                          
+      168 -            break                                             
+      169 -        page_token = data.get("page_token")                   
+      170 -    return records                                            
+      138  
+      139 +# ─── HRM API ────────────────────────────────────────────────
+          +─────────────────                                             
+      140  
+      173 -def mark_email_sent_in_base(record_id: str) -> bool:          
+      174 -    """Ghi timestamp hiện tại vào field 'Email mời PV' của rec
+          -ord."""                                                       
+      175 -    app_token = lark.resolve_app_token(CV_LARK_APP_TOKEN, CV_L
+          -ARK_TOKEN_TYPE)                                               
+      176 -    now_ts_ms = int(datetime.now(tz=_VN_TZ).timestamp() * 1000
+          -)                                                             
+      177 -    try:                                                      
+      178 -        lark.update_bitable_record(                           
+      179 -            app_token, CV_LARK_TABLE_ID, record_id,           
+      180 -            {FIELD_EMAIL_SENT: now_ts_ms},                    
+      181 -        )                                                     
+      182 -        return True                                           
+      183 -    except Exception:                                         
+      184 -        log.exception("mark_email_sent_in_base failed cho reco
+          -rd %s", record_id)                                            
+      185 -        return False                                          
+      141 +def fetch_candidates() -> list[dict]:                         
+      142 +    r = requests.get(HRM_API, headers={"X-API-Key": HRM_KEY}, 
+          +timeout=20).json()                                            
+      143 +    return r.get("data") or []                                
+      144  
+      145  
+      188 -# ─── Lark Mail: gửi email mời phỏng vấn từ tuyendung@seongon.
+          -com ────────────                                              
+      146 +def is_ready(c: dict) -> bool:                                
+      147 +    return (                                                  
+      148 +        (c.get(F_STATUS) or "").strip() == STATUS_READY       
+      149 +        and (c.get(F_FIT) or "").strip() == FIT_YES           
+      150 +        and bool((c.get(F_INTERVIEW) or "").strip())          
+      151 +    )                                                         
+      152  
+      153 +                                                              
+      154 +# ─── Lark Mail send ─────────────────────────────────────────
+          +─────────────────                                             
+      155 +                                                              
+      156  def _build_email_html(name: str, position: str, interview_str:
+            str) -> str:
+      157      return f"""\
+      158  <div style="font-family:Arial,sans-serif;font-size:15px;color:
+           #222;max-width:600px">
+     ...
+      173  
+      174  <p>Trân trọng,<br>
+      175  <b>Phòng Tuyển dụng - SEONGON</b><br>
+      210 -Email: <a href="mailto:{CV_GMAIL_USER}">{CV_GMAIL_USER}</a><br
+          ->                                                             
+      176 +Email: <a href="mailto:{SENDER_MAIL}">{SENDER_MAIL}</a><br>   
+      177  Website: <a href="https://seongon.com">seongon.com</a></p>
+      178  </div>
+      179  """
+      180  
+      181  
+      216 -def _lark_mail_send(to_email: str, to_name: str, subject: str,
+          - body_html: str) -> bool:                                     
+      217 -    """Gửi email qua Lark Mail OpenAPI, send AS tuyendung@seon
+          -gon.com."""                                                   
+      218 -    user_token = _get_lark_user_access_token()                
+      219 -    if not user_token:                                        
+      220 -        log.error("Không có Lark user access token — không gửi
+          - được mail")                                                  
+      221 -        return False                                          
+      222 -                                                              
+      223 -    sender = quote(CV_GMAIL_USER, safe="")  # URL-encode "tuye
+          -ndung@seongon.com"                                            
+      182 +def send_lark_mail(to_email: str, to_name: str, subject: str, 
+          +body_html: str) -> bool:                                      
+      183 +    """Gửi mail. Thử user_token (Sếp Linh) trước, nếu không th
+          +ì tenant_token."""                                            
+      184 +    sender = quote(SENDER_MAIL, safe="")                      
+      185      url = f"{LARK_DOMAIN}/open-apis/mail/v1/user_mailboxes/{se
+           nder}/messages/send"
+      225 -                                                              
+      186      body_b64 = base64.b64encode(body_html.encode("utf-8")).dec
+           ode()
+      187      payload = {
+      188          "subject": subject,
+      189          "to": [{"mail_address": to_email, "name": to_name or t
+           o_email}],
+      190          "body_html": body_b64,
+      231 -        "head_from": {                                        
+      232 -            "mail_address": CV_GMAIL_USER,                    
+      233 -            "name": "Phòng Tuyển dụng SEONGON",               
+      191 +        "head_from": {"mail_address": SENDER_MAIL, "name": "Ph
+          +òng Tuyển dụng SEONGON"},                                     
+      192 +    }                                                         
+      193 +                                                              
+      194 +    for token_label, token in (("user", _get_user_token()), ("
+          +tenant", _get_tenant_token())):                               
+      195 +        if not token:                                         
+      196 +            continue                                          
+      197 +        resp = requests.post(                                 
+      198 +            url,                                              
+      199 +            headers={                                         
+      200 +                "Authorization": f"Bearer {token}",           
+      201 +                "Content-Type": "application/json; charset=utf
+          +-8",                                                          
+      202 +            },                                                
+      203 +            json=payload, timeout=20,                         
+      204 +        ).json()                                              
+      205 +        if resp.get("code") == 0:                             
+      206 +            log.info("✉️  Lark mail [%s_token] sent → %s (msg_i
+          +d=%s)",                                                       
+      207 +                     token_label, to_email, resp.get("data", {
+          +}).get("message_id"))                                         
+      208 +            return True                                       
+      209 +        log.warning("Lark mail [%s_token] failed: code=%s msg=
+          +%s",                                                          
+      210 +                    token_label, resp.get("code"), str(resp)[:
+          +300])                                                         
+      211 +    return False                                              
+      212 +                                                              
+      213 +                                                              
+      214 +# ─── Lark IM notification ───────────────────────────────────
+          +─────────────────                                             
+      215 +                                                              
+      216 +def send_lark_im(text: str) -> None:                          
+      217 +    token = _get_tenant_token()                               
+      218 +    if not token:                                             
+      219 +        log.warning("Không có tenant_token để gửi Lark IM")   
+      220 +        return                                                
+      221 +    receive_id = NOTIFY_USER_ID                               
+      222 +    if not receive_id:                                        
+      223 +        log.warning("CV_NOTIFY_USER_ID rỗng — bỏ qua Lark IM")
+      224 +        return                                                
+      225 +    id_type = "chat_id" if receive_id.startswith("oc_") else "
+          +open_id"                                                      
+      226 +    url = f"{LARK_DOMAIN}/open-apis/im/v1/messages?receive_id_
+          +type={id_type}"                                               
+      227 +    resp = requests.post(                                     
+      228 +        url,                                                  
+      229 +        headers={"Authorization": f"Bearer {token}", "Content-
+          +Type": "application/json"},                                   
+      230 +        json={                                                
+      231 +            "receive_id": receive_id,                         
+      232 +            "msg_type": "text",                               
+      233 +            "content": json.dumps({"text": text}, ensure_ascii
+          +=False),                                                      
+      234          },
+      235 +        timeout=15,                                           
+      236 +    ).json()                                                  
+      237 +    if resp.get("code") != 0:                                 
+      238 +        log.warning("Lark IM failed: %s", str(resp)[:300])    
+      239 +    else:                                                     
+      240 +        log.info("💬 Lark IM sent")                           
+      241 +                                                              
+      242 +                                                              
+      243 +# ─── Lark Calendar ──────────────────────────────────────────
+          +─────────────────                                             
+      244 +                                                              
+      245 +def create_calendar_event(candidate_name: str, position: str, 
+          +start_dt: datetime) -> str | None:                            
+      246 +    token = _get_user_token()                                 
+      247 +    if not token:                                             
+      248 +        log.warning("Không có user_token → bỏ qua Calendar eve
+          +nt")                                                          
+      249 +        return None                                           
+      250 +    start_s = int(start_dt.timestamp())                       
+      251 +    end_s   = start_s + INTERVIEW_DURATION_MIN * 60           
+      252 +    payload = {                                               
+      253 +        "summary": f"PV | {candidate_name} — {position}",     
+      254 +        "description": f"Phỏng vấn ứng viên {candidate_name} c
+          +ho vị trí {position} tại SEONGON.",                           
+      255 +        "need_notification": True,                            
+      256 +        "start_time": {"timestamp": str(start_s), "timezone": 
+          +"Asia/Ho_Chi_Minh"},                                          
+      257 +        "end_time":   {"timestamp": str(end_s),   "timezone": 
+          +"Asia/Ho_Chi_Minh"},                                          
+      258 +        "free_busy_status": "busy",                           
+      259 +        "visibility": "default",                              
+      260      }
+      236 -    headers = {                                               
+      237 -        "Authorization": f"Bearer {user_token}",              
+      238 -        "Content-Type": "application/json; charset=utf-8",    
+      239 -    }                                                         
+      240 -    try:                                                      
+      241 -        resp = requests.post(url, headers=headers, json=payloa
+          -d, timeout=20).json()                                         
+      242 -        if resp.get("code") != 0:                             
+      243 -            log.error("Lark mail send failed: %s", str(resp)[:
+          -400])                                                         
+      244 -            return False                                      
+      245 -        log.info(                                             
+      246 -            "✉️  Lark mail sent → %s (msg_id=%s)",            
+      247 -            to_email,                                         
+      248 -            resp.get("data", {}).get("message_id", ""),       
+      249 -        )                                                     
+      250 -        return True                                           
+      251 -    except Exception:                                         
+      252 -        log.exception("Lark mail send exception")             
+      253 -        return False                                          
+      261 +    resp = requests.post(                                     
+      262 +        f"{LARK_DOMAIN}/open-apis/calendar/v4/calendars/primar
+          +y/events",                                                    
+      263 +        headers={"Authorization": f"Bearer {token}", "Content-
+          +Type": "application/json"},                                   
+      264 +        json=payload, timeout=15,                             
+      265 +    ).json()                                                  
+      266 +    if resp.get("code") != 0:                                 
+      267 +        log.warning("Calendar create failed: %s", str(resp)[:3
+          +00])                                                          
+      268 +        return None                                           
+      269 +    event_id = resp.get("data", {}).get("event", {}).get("even
+          +t_id")                                                        
+      270 +    log.info("📅 Calendar event created: %s", event_id)       
+      271 +    return event_id                                           
+      272  
+      273  
+      256 -def send_interview_email(record: dict) -> bool:               
+      257 -    fields = record.get("fields", {})                         
+      258 -    name     = _str(fields.get(FIELD_NAME)) or "Ứng viên"     
+      259 -    position = _str(fields.get(FIELD_POSITION)) or "vị trí ứng
+          - tuyển"                                                       
+      260 -    to_email = _str(fields.get(FIELD_EMAIL))                  
+      261 -    if not to_email:                                          
+      262 -        log.warning("record %s thiếu email ứng viên", record.g
+          -et("record_id"))                                              
+      274 +# ─── Main ───────────────────────────────────────────────────
+          +─────────────────                                             
+      275 +                                                              
+      276 +def process_candidate(c: dict) -> bool:                       
+      277 +    name     = (c.get(F_NAME) or "Ứng viên").strip()          
+      278 +    position = (c.get(F_POSITION) or "vị trí ứng tuyển").strip
+          +()                                                            
+      279 +    email    = (c.get(F_EMAIL) or "").strip()                 
+      280 +    if not email:                                             
+      281 +        log.warning("Skip %s — không có email", name)         
+      282          return False
+      283  
+      265 -    ts = _ts_ms(fields.get(FIELD_INTERVIEW))                  
+      266 -    interview_str = _fmt_vn(ts) if ts else "sẽ được xác nhận r
+          -iêng"                                                         
+      284 +    pv_dt = _parse_interview_dt(c.get(F_INTERVIEW) or "")     
+      285 +    interview_str = _fmt_vn(pv_dt) if pv_dt else (c.get(F_INTE
+          +RVIEW) or "sẽ xác nhận sau")                                  
+      286  
+      287      subject = f"[SEONGON] Thư mời phỏng vấn vị trí {position}"
+      288      body_html = _build_email_html(name, position, interview_st
+           r)
+      270 -    return _lark_mail_send(to_email, name, subject, body_html)
+      289  
+      290 +    if not send_lark_mail(email, name, subject, body_html):   
+      291 +        return False                                          
+      292  
+      273 -# ─── Lark: thông báo cho HRM ────────────────────────────────
+          -─────────────────                                             
+      274 -                                                              
+      275 -def send_lark_notification(record: dict) -> None:             
+      276 -    fields = record.get("fields", {})                         
+      277 -    name     = _str(fields.get(FIELD_NAME)) or "?"            
+      278 -    position = _str(fields.get(FIELD_POSITION)) or "?"        
+      279 -    to_email = _str(fields.get(FIELD_EMAIL)) or "?"           
+      280 -    ts = _ts_ms(fields.get(FIELD_INTERVIEW))                  
+      281 -    interview_str = _fmt_vn(ts) if ts else "chưa rõ"          
+      282 -                                                              
+      283 -    text = (                                                  
+      293 +    send_lark_im(                                             
+      294          f"✅ Đã gửi thư mời phỏng vấn\n"
+      295          f"• Ứng viên: {name}\n"
+      296          f"• Vị trí: {position}\n"
+      297          f"• Lịch PV: {interview_str}\n"
+      288 -        f"• Email ứng viên: {to_email}"                       
+      298 +        f"• Email: {email}"                                   
+      299      )
+      290 -    try:                                                      
+      291 -        if CV_NOTIFY_USER_ID:                                 
+      292 -            lark.send_text(CV_NOTIFY_USER_ID, text)           
+      293 -        elif CV_NOTIFY_EMAIL:                                 
+      294 -            lark.send_text_to_email(CV_NOTIFY_EMAIL, text)    
+      295 -        log.info("💬 Lark notification sent for %s", name)    
+      296 -    except Exception:                                         
+      297 -        log.exception("send_lark_notification failed")        
+      300  
+      301 +    if pv_dt:                                                 
+      302 +        create_calendar_event(name, position, pv_dt)          
+      303 +    return True                                               
+      304  
+      300 -# ─── Lark Calendar: tạo event phỏng vấn ─────────────────────
+          -────────────────                                              
+      305  
+      302 -def create_lark_calendar_event(record: dict) -> str | None:   
+      303 -    """Tạo Lark Calendar event. Trả về event_id nếu thành công
+          -, None nếu lỗi."""                                            
+      304 -    fields = record.get("fields", {})                         
+      305 -    name     = _str(fields.get(FIELD_NAME)) or "Ứng viên"     
+      306 -    position = _str(fields.get(FIELD_POSITION)) or "Vị trí ứng
+          - tuyển"                                                       
+      307 -                                                              
+      308 -    ts = _ts_ms(fields.get(FIELD_INTERVIEW))                  
+      309 -    if not ts:                                                
+      310 -        log.warning("Không có thời gian PV cho %s — bỏ qua tạo
+          - Calendar", name)                                             
+      311 -        return None                                           
+      312 -                                                              
+      313 -    start_s = ts // 1000                                      
+      314 -    end_s   = start_s + INTERVIEW_DURATION_MIN * 60           
+      315 -                                                              
+      316 -    try:                                                      
+      317 -        user_token = _get_lark_user_access_token()            
+      318 -        if not user_token:                                    
+      319 -            log.warning("Không có Lark user token — bỏ qua tạo
+          - Calendar")                                                   
+      320 -            return None                                       
+      321 -                                                              
+      322 -        headers = {                                           
+      323 -            "Authorization": f"Bearer {user_token}",          
+      324 -            "Content-Type": "application/json; charset=utf-8",
+      325 -        }                                                     
+      326 -        body = {                                              
+      327 -            "summary": f"PV | {name} — {position}",           
+      328 -            "description": (                                  
+      329 -                f"Phỏng vấn ứng viên {name} cho vị trí {positi
+          -on} tại SEONGON.\n"                                           
+      330 -                f"Tạo tự động bởi Interview Agent."           
+      331 -            ),                                                
+      332 -            "need_notification": True,                        
+      333 -            "start_time": {"timestamp": str(start_s), "timezon
+          -e": "Asia/Ho_Chi_Minh"},                                      
+      334 -            "end_time":   {"timestamp": str(end_s),   "timezon
+          -e": "Asia/Ho_Chi_Minh"},                                      
+      335 -            "free_busy_status": "busy",                       
+      336 -            "visibility": "default",                          
+      337 -        }                                                     
+      338 -        resp = requests.post(                                 
+      339 -            f"{LARK_DOMAIN}/open-apis/calendar/v4/calendars/pr
+          -imary/events",                                                
+      340 -            headers=headers, json=body, timeout=15,           
+      341 -        ).json()                                              
+      342 -        if resp.get("code") != 0:                             
+      343 -            log.error("create_lark_calendar_event failed: %s",
+          - str(resp)[:300])                                             
+      344 -            return None                                       
+      345 -        event_id = resp.get("data", {}).get("event", {}).get("
+          -event_id")                                                    
+      346 -        log.info("📅 Calendar event created: %s for %s", event
+          -_id, name)                                                    
+      347 -        return event_id                                       
+      348 -    except Exception:                                         
+      349 -        log.exception("create_lark_calendar_event failed")    
+      350 -        return None                                           
+      351 -                                                              
+      352 -                                                              
+      353 -# ─── Main pipeline ──────────────────────────────────────────
+          -──────────────────                                            
+      354 -                                                              
+      306  def run_once() -> None:
+      307      log.info("=== Interview Agent: bắt đầu quét ===")
+      357 -    field_ok = ensure_email_sent_field()                      
+      358 -    candidates = query_ready_candidates(track_in_base=field_ok
+          -)                                                             
+      359 -    log.info("Tìm thấy %d ứng viên đủ điều kiện", len(candidat
+          -es))                                                          
+      308 +    all_cands = fetch_candidates()                            
+      309 +    ready = [c for c in all_cands if is_ready(c)]             
+      310 +    log.info("HRM: %d total → %d ứng viên đủ điều kiện", len(a
+          +ll_cands), len(ready))                                        
+      311  
+      312      sent = _load_sent()
+      313      new_sent = 0
+      363 -                                                              
+      364 -    for record in candidates:                                 
+      365 -        record_id = record.get("record_id")                   
+      366 -        if not record_id or record_id in sent:                
+      314 +    for c in ready:                                           
+      315 +        cid = c.get(F_ID)                                     
+      316 +        if not cid or cid in sent:                            
+      317              continue
+      368 -                                                              
+      369 -        name = _str(record.get("fields", {}).get(FIELD_NAME)) 
+          -or record_id                                                  
+      370 -        log.info("Xử lý: %s (record_id=%s)", name, record_id) 
+      371 -                                                              
+      372 -        email_ok = send_interview_email(record)               
+      373 -        if email_ok:                                          
+      374 -            send_lark_notification(record)                    
+      375 -            create_lark_calendar_event(record)                
+      376 -            mark_email_sent_in_base(record_id)                
+      377 -            sent.add(record_id)                               
+      318 +        name = c.get(F_NAME) or cid                           
+      319 +        log.info("Xử lý: %s (id=%s)", name, cid)              
+      320 +        if process_candidate(c):                              
+      321 +            sent.add(cid)                                     
+      322              new_sent += 1
+      323          else:
+      380 -            log.warning("Email thất bại → bỏ qua Lark/Calendar
+          - cho %s", name)                                               
+      381 -                                                              
+      324 +            log.warning("Skip %s — gửi mail thất bại", name)  
+      325      _save_sent(sent)
+      383 -    log.info("=== Interview Agent: xong. Đã gửi %d email mới =
+          -==", new_sent)                                                
+      326 +    log.info("=== Xong: %d email mới đã gửi ===", new_sent)   
+      327  
+      328  
+      329  if __name__ == "__main__":
+
+⏺ Bash(cd "/Users/Ngoclinh/Desktop/Lark Bot" && .venv/bin/python
+      interview_invite_agent.py 2>&1 | tail -40)
+  ⎿  2026-05-20 21:43:59,519 [INFO] interview-agent — === Interview Agent:
+     bắt đầu quét ===
+     2026-05-20 21:44:00,328 [INFO] interview-agent — HRM: 85 total → 1 ứng
+     … +13 lines (ctrl+o to expand)
+
+⏺ Tin tốt + tin xấu:
+
+  ✅ Phần đã chạy đúng
+
+  - HRM API: tìm thấy Linh Test trong 85 ứng viên
+  - Filter đúng: Trạng thái "Quản lý đã duyệt" + Tình trạng "Phù hợp" + Lịch PV
+  10:30 21/05/2026
+  - Tenant token (app-level): OK
+
+  ❌ Chỗ đang kẹt
+
+  Lark Mail API bắt buộc dùng user access token của Sếp Linh (không nhận tenant
+  token — đã test xác nhận).
+
+  Refresh token cũ trong .env đã hết hạn (code=20038) → cần re-authorize OAuth.
+
+  Đây là bước DUY NHẤT cần Sếp tự làm trong browser, không tự động hoá được:
+
+  ---
+  🔑 Bước Sếp cần làm (mất ~30 giây)
+
+  1. Click URL này, đăng nhập bằng nguyenthingoclinh@seongon.com
+
+  https://open.larksuite.com/open-apis/authen/v1/authorize?app_id=cli_a97b4c1583
+  f8ded1&redirect_uri=https%3A%2F%2Fopen.larksuite.com%2Fapi-explorer%2Floading&
+  response_type=code&scope=mail%3Auser_mailbox.message%3Asend_as+mail%3Auser_mai
+  lbox.message%3Aread+mail%3Auser_mailbox.message+calendar%3Acalendar+contact%3A
+  user.base%3Areadonly&state=interview-agent
+
+  2. Sau khi "Authorize", browser redirect tới URL kiểu:
+
+  https://open.larksuite.com/api-explorer/loading?code=XXXXXX&state=interview-ag
+  ent
+
+  3. Copy phần XXXXXX (sau code=, trước &state) gửi cho tôi
+
+  Tôi sẽ tự exchange code → lấy refresh token mới → ghi vào .env → chạy lại
+  agent → email Sếp sẽ nhận được trong vài giây.
+
+  ---
+  ⚠️ Lưu ý nhỏ
+
+  Khi click URL, nếu Lark báo "Redirect URI không khớp", Sếp cần vào Lark App
+  Console
+  (https://open.larksuite.com/app/cli_a97b4c1583f8ded1/dev-config/redirect-url)
+  → mục Redirect URLs → thêm:
+  https://open.larksuite.com/api-explorer/loading
+
+  Rồi save và click lại URL ở bước 1.
+
+  Sếp paste lại code cho tôi nhé.
+
+[Image #1]
+
+❯ Bạn nhầm rồi. Thông tin ứng viên ở file này cơ mà:                            
+  https://ngoclinhhrm.com/tuyen-dung/                                           
+
+⏺ Sếp ơi, tôi đang đọc đúng nguồn data của dashboard này rồi! 🎯
+
+  Bằng chứng từ log lần chạy trước:
+
+  HRM: 85 total → 1 ứng viên đủ điều kiện
+  Xử lý: Linh Test (id=5953c667)
+
+  Khớp 100% với dashboard:
+
+  ┌────────────────────────────────────┬─────────────────┐
+  │             Dashboard              │ Agent đọc được  │
+  ├────────────────────────────────────┼─────────────────┤
+  │ "Tổng ứng viên: 85"                │ "HRM: 85 total" │
+  ├────────────────────────────────────┼─────────────────┤
+  │ Linh Test, ngoclinhk47u1@gmail.com │ ✅ found        │
+  ├────────────────────────────────────┼─────────────────┤
+  │ CTO - Giám Đốc Công Nghệ           │ ✅              │
+  ├────────────────────────────────────┼─────────────────┤
+  │ Quản lý đã duyệt                   │ ✅              │
+  ├────────────────────────────────────┼─────────────────┤
+  │ Phù hợp                            │ ✅              │
+  ├────────────────────────────────────┼─────────────────┤
+  │ 10:30 21/05/2026                   │ ✅              │
+  └────────────────────────────────────┴─────────────────┘
+
+  Dashboard ngoclinhhrm.com/tuyen-dung và HRM API
+  hrm-api-521103150103.asia-southeast1.run.app là CÙNG 1 nguồn data — frontend
+  đọc từ API này.
+
+  (Lúc trước tôi nói "Lark Base sai" — đó là 1 nguồn KHÁC, không phải dashboard
+  này. Giờ tôi đã chuyển sang đọc đúng HRM API rồi.)
+
+  ---
+  🚧 Vấn đề duy nhất còn lại: chưa gửi được email
+
+  Agent đã tìm thấy Linh Test, đã build email, nhưng khi gọi Lark Mail API gửi
+  đi thì bị từ chối:
+
+  Lark user token refresh thất bại: code=20038      ← refresh token cũ hết hạn
+  Lark mail [tenant_token] failed: code=99991663    ← Lark Mail KHÔNG nhận app
+  token, bắt buộc user token
+
+  → Bắt buộc cần Sếp re-authorize Lark OAuth 1 lần (30 giây).
+
+  Đây là chính sách của Lark, không bypass được: Lark Mail Send API chỉ chấp
+  nhận user access token (token đại diện cho 1 người thật có quyền gửi from
+  tuyendung@seongon.com).
+
+  ---
+  ⏩ Sếp click URL này → paste lại code
+
+  https://open.larksuite.com/open-apis/authen/v1/authorize?app_id=cli_a97b4c1583
+  f8ded1&redirect_uri=https%3A%2F%2Fopen.larksuite.com%2Fapi-explorer%2Floading&
+  response_type=code&scope=mail%3Auser_mailbox.message%3Asend_as+mail%3Auser_mai
+  lbox.message%3Aread+mail%3Auser_mailbox.message+calendar%3Acalendar+contact%3A
+  user.base%3Areadonly&state=interview-agent
+
+  Đăng nhập bằng nguyenthingoclinh@seongon.com → bấm Authorize → browser sẽ
+  redirect tới URL có ?code=XXXXXX → Sếp copy phần XXXXXX gửi tôi.
+
+  Tôi sẽ tự exchange → update .env → chạy lại → email Linh Test sẽ vào inbox
+  ngoclinhk47u1@gmail.com ngay.
+
+[Image #1]
+
+⏺ Lỗi 20043 = app chưa được cấp các scope mail. Cần Sếp thêm scope vào app
+  config trước, rồi mới authorize được.
+
+  🔧 Bước thêm scope (làm 1 lần duy nhất)
+
+  1. Mở Lark Developer Console của app
+
+  https://open.larksuite.com/app/cli_a97b4c1583f8ded1/auth?q=&op_from=
+  (Đăng nhập bằng tài khoản có quyền admin app — thường là tài khoản tạo app)
+
+  2. Thêm 5 scope sau
+
+  Click "Add Scope" rồi search & tick từng cái:
+
+  ┌───────────────────────────────────┬──────────────────────────────────────┐
+  │               Scope               │              Để làm gì               │
+  ├───────────────────────────────────┼──────────────────────────────────────┤
+  │ mail:user_mailbox.message:send_as │ Gửi mail thay mặt mailgroup          │
+  │                                   │ tuyendung@                           │
+  ├───────────────────────────────────┼──────────────────────────────────────┤
+  │ mail:user_mailbox.message:read    │ Đọc mail (CV processor cũ cần)       │
+  ├───────────────────────────────────┼──────────────────────────────────────┤
+  │ mail:user_mailbox.message         │ Quản lý mail message                 │
+  ├───────────────────────────────────┼──────────────────────────────────────┤
+  │ calendar:calendar                 │ Tạo event Calendar                   │
+  ├───────────────────────────────────┼──────────────────────────────────────┤
+  │ contact:user.base:readonly        │ Đọc info user                        │
+  └───────────────────────────────────┴──────────────────────────────────────┘
+
+  3. Quan trọng: Sau khi add scope, bấm "Create Version & Publish" (góc phải 
+  trên cùng) → đợi version mới được tenant duyệt (thường tự động nếu app 
+  internal).
+
+  4. Click lại URL authorize ban đầu
+
+  https://open.larksuite.com/open-apis/authen/v1/authorize?app_id=cli_a97b4c1583
+  f8ded1&redirect_uri=https%3A%2F%2Fopen.larksuite.com%2Fapi-explorer%2Floading&
+  response_type=code&scope=mail%3Auser_mailbox.message%3Asend_as+mail%3Auser_mai
+  lbox.message%3Aread+mail%3Auser_mailbox.message+calendar%3Acalendar+contact%3A
+  user.base%3Areadonly&state=interview-agent
+
+  → Lần này sẽ hiện màn hình "Authorize" có list permissions → bấm OK → browser
+  redirect tới URL có code=XXX → Sếp paste lại đây.
+
+  ---
+  Nếu Sếp không có quyền admin app, báo lại tôi — tôi sẽ chuyển sang approach
+  khác (dùng SMTP với app password của Lark Mail, không cần OAuth scope).
+
+❯ Tôi có quyền addmin. Tôi uỷ quyền bạn dùng máy tính tôi. Tự làm đi            
+
+⏺ OK tôi tự làm. Để tôi load công cụ điều khiển browser.

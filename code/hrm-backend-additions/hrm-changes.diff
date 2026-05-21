@@ -1,5 +1,5 @@
 diff --git a/backend/app.py b/backend/app.py
-index 17993ae..0d15b54 100644
+index 17993ae..ce56fc3 100644
 --- a/backend/app.py
 +++ b/backend/app.py
 @@ -15,6 +15,7 @@ import drive_upload
@@ -10,7 +10,137 @@ index 17993ae..0d15b54 100644
  import agent as hrm_agent
  
  logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-@@ -172,6 +173,55 @@ def delete_candidate_route(candidate_id):
+@@ -104,6 +105,74 @@ VALID_STATUSES = [
+ VALID_TINH_TRANG = ["", "Phù hợp", "Không phù hợp"]
+ 
+ 
++# ── Background triggers — gọi từ thread sau khi PATCH ────────────────────────
++
++def _trigger_send_invite(candidate_id: str, force: bool = False) -> None:
++    """Background: gửi invite email + cập nhật status.
++    force=True → bỏ qua check 'đã sent' (dùng khi Sếp đổi Tình trạng từ Không phù hợp ↔ Phù hợp).
++    """
++    try:
++        c = db.get_candidate(candidate_id)
++        if not c:
++            return
++        if not force and c.get("Email mời PV - Trạng thái") == "sent":
++            return
++        ok, info = lark_mail.send_invite_email(c)
++        now = datetime.now().strftime("%d/%m/%Y %H:%M")
++        db.update_candidate_fields(candidate_id, {
++            "email_invite_status": "sent" if ok else "failed",
++            "email_invite_sent_at": now,
++            "email_invite_error": "" if ok else info,
++        })
++        if ok:
++            log.info("Auto-sent invite email cho %s (msg_id=%s, force=%s)", candidate_id, info, force)
++            # Báo Lark IM cho HRM
++            lark_mail.send_lark_im(
++                f"✅ Đã gửi thư mời phỏng vấn\n"
++                f"• Ứng viên: {c.get('Họ tên','?')}\n"
++                f"• Vị trí: {c.get('Vị trí ứng tuyển','?')}\n"
++                f"• Lịch PV: {c.get('Lịch PV','?')}\n"
++                f"• Email: {c.get('Email','?')}"
++            )
++        else:
++            log.warning("Auto-send invite email failed cho %s: %s", candidate_id, info)
++    except Exception:
++        log.exception("_trigger_send_invite exception")
++
++
++def _trigger_send_rejection(candidate_id: str, force: bool = False) -> None:
++    """Background: gửi rejection email + cập nhật status.
++    force=True → bỏ qua check 'đã sent'.
++    """
++    try:
++        c = db.get_candidate(candidate_id)
++        if not c:
++            return
++        if not force and c.get("Email từ chối - Trạng thái") == "sent":
++            return
++        ok, info = lark_mail.send_rejection_email(c)
++        now = datetime.now().strftime("%d/%m/%Y %H:%M")
++        db.update_candidate_fields(candidate_id, {
++            "rejection_email_status": "sent" if ok else "failed",
++            "rejection_email_sent_at": now,
++            "rejection_email_error": "" if ok else info,
++        })
++        if ok:
++            log.info("Auto-sent rejection email cho %s (msg_id=%s, force=%s)", candidate_id, info, force)
++            # Báo Lark IM cho HRM
++            lark_mail.send_lark_im(
++                f"❌ Đã gửi email TỪ CHỐI ứng viên\n"
++                f"• Ứng viên: {c.get('Họ tên','?')}\n"
++                f"• Vị trí: {c.get('Vị trí ứng tuyển','?')}\n"
++                f"• Email: {c.get('Email','?')}\n"
++                f"• Lý do: Tình trạng = Không phù hợp"
++            )
++        else:
++            log.warning("Auto-send rejection email failed cho %s: %s", candidate_id, info)
++    except Exception:
++        log.exception("_trigger_send_rejection exception")
++
++
+ @app.patch("/api/candidates/<candidate_id>/status")
+ @require_api_key
+ def update_status(candidate_id):
+@@ -126,8 +195,54 @@ def update_candidate(candidate_id):
+         return jsonify({"error": f"Trạng thái phải là một trong: {VALID_STATUSES}"}), 400
+     if "tinh_trang" in data and data["tinh_trang"] not in VALID_TINH_TRANG:
+         return jsonify({"error": f"Tình trạng phải là: {VALID_TINH_TRANG}"}), 400
++
++    # ─── Snapshot BEFORE update (để detect transition) ───────────────────
++    c_before = db.get_candidate(candidate_id) or {}
++    old_tinh_trang = c_before.get("Tình trạng", "")
++    old_trang_thai = c_before.get("Trạng thái", "")
++    old_lich_pv = (c_before.get("Lịch PV") or "").strip()
++
+     updated = db.update_candidate_fields(candidate_id, data)
+ 
++    # ─── Snapshot AFTER update ───────────────────────────────────────────
++    c_after = db.get_candidate(candidate_id) or {}
++    new_tinh_trang = c_after.get("Tình trạng", "")
++    new_trang_thai = c_after.get("Trạng thái", "")
++    new_lich_pv = (c_after.get("Lịch PV") or "").strip()
++    has_email = bool((c_after.get("Email") or "").strip())
++
++    # TRIGGER REJECTION: Tình trạng = "Không phù hợp"
++    # Gửi nếu (a) lần đầu chưa sent  HOẶC  (b) Tình trạng vừa đổi sang "Không phù hợp"
++    if new_tinh_trang == "Không phù hợp" and has_email:
++        transitioned = (old_tinh_trang != new_tinh_trang)
++        not_yet_sent = (c_after.get("Email từ chối - Trạng thái") != "sent")
++        if transitioned or not_yet_sent:
++            threading.Thread(
++                target=_trigger_send_rejection,
++                args=(candidate_id, transitioned),  # force=True nếu vừa transition
++                daemon=True,
++            ).start()
++            log.info("Trigger rejection email cho %s (transitioned=%s)", candidate_id, transitioned)
++
++    # TRIGGER INVITE: Đủ 3 ĐK (Quản lý đã duyệt + Phù hợp + có Lịch PV)
++    # Gửi nếu (a) lần đầu chưa sent  HOẶC  (b) Vừa transition vào trạng thái "ready"
++    if (new_trang_thai == "Quản lý đã duyệt"
++        and new_tinh_trang == "Phù hợp"
++        and new_lich_pv
++        and has_email):
++        was_ready = (old_trang_thai == "Quản lý đã duyệt"
++                     and old_tinh_trang == "Phù hợp"
++                     and old_lich_pv)
++        transitioned_into_ready = not was_ready
++        not_yet_sent = (c_after.get("Email mời PV - Trạng thái") != "sent")
++        if transitioned_into_ready or not_yet_sent:
++            threading.Thread(
++                target=_trigger_send_invite,
++                args=(candidate_id, transitioned_into_ready),
++                daemon=True,
++            ).start()
++            log.info("Trigger invite email cho %s (transitioned=%s)", candidate_id, transitioned_into_ready)
++
+     # TRIGGER: nếu chuyển sang "Chuyển cho quản lý check CV" → gửi card vào nhóm Lark + auto chuyển tiếp sang "Quản lý chưa check"
+     if data.get("trang_thai") == "Chuyển cho quản lý check CV":
+         try:
+@@ -172,6 +287,103 @@ def delete_candidate_route(candidate_id):
      return jsonify({"ok": True})
  
  
@@ -63,10 +193,58 @@ index 17993ae..0d15b54 100644
 +        return jsonify({"ok": False, "status": "failed", "error": info}), 502
 +
 +
++@app.post("/api/candidates/<candidate_id>/send-rejection-email")
++@require_api_key
++def send_rejection_email_route(candidate_id):
++    """Gửi (hoặc gửi lại) email TỪ CHỐI cho ứng viên qua Lark Mail.
++    Body (optional): {force: bool} — bỏ qua check "đã gửi rồi".
++    """
++    c = db.get_candidate(candidate_id)
++    if not c:
++        return jsonify({"error": "Không tìm thấy ứng viên"}), 404
++
++    data = request.get_json(silent=True) or {}
++    force = bool(data.get("force"))
++
++    if not (c.get("Email") or "").strip():
++        msg = "Ứng viên không có email"
++        db.update_candidate_fields(candidate_id, {
++            "rejection_email_status": "failed",
++            "rejection_email_sent_at": datetime.now().strftime("%d/%m/%Y %H:%M"),
++            "rejection_email_error": msg,
++        })
++        return jsonify({"ok": False, "error": msg}), 400
++
++    if not force and c.get("Email từ chối - Trạng thái") == "sent":
++        return jsonify({
++            "ok": True,
++            "status": "sent",
++            "sent_at": c.get("Email từ chối - Gửi lúc", ""),
++            "note": "Email từ chối đã được gửi trước đó. Truyền force=true để gửi lại.",
++        })
++
++    ok, info = lark_mail.send_rejection_email(c)
++    now = datetime.now().strftime("%d/%m/%Y %H:%M")
++    if ok:
++        db.update_candidate_fields(candidate_id, {
++            "rejection_email_status": "sent",
++            "rejection_email_sent_at": now,
++            "rejection_email_error": "",
++        })
++        return jsonify({"ok": True, "status": "sent", "sent_at": now, "message_id": info})
++    else:
++        db.update_candidate_fields(candidate_id, {
++            "rejection_email_status": "failed",
++            "rejection_email_sent_at": now,
++            "rejection_email_error": info,
++        })
++        return jsonify({"ok": False, "status": "failed", "error": info}), 502
++
++
  @app.post("/api/candidates/<candidate_id>/upload-file")
  @require_api_key
  def upload_candidate_file(candidate_id):
-@@ -336,6 +386,37 @@ def send_candidate_to_lark(candidate_id):
+@@ -336,6 +548,37 @@ def send_candidate_to_lark(candidate_id):
      return jsonify({"ok": ok, "chat_id": chat_id[:15] + "..."})
  
  
@@ -104,7 +282,7 @@ index 17993ae..0d15b54 100644
  @app.post("/api/jobs/<job_id>/upload-pv-template")
  @require_api_key
  def upload_pv_template(job_id):
-@@ -711,6 +792,8 @@ def upload_cv_pdf():
+@@ -711,6 +954,8 @@ def upload_cv_pdf():
              "nguon": data.get("nguon", "TopCV"),
              "email_id": data.get("email_id", f"upload_{drive_url[-30:]}"),
              "email_from": data.get("email", ""),
@@ -114,7 +292,7 @@ index 17993ae..0d15b54 100644
          # Smart-match vị trí + chấm điểm AI
          job = db.find_job_by_title(cv_info.get("vi_tri_ung_tuyen", ""))
 diff --git a/backend/db.py b/backend/db.py
-index 87cdee0..b1476b8 100644
+index 87cdee0..46e32e2 100644
 --- a/backend/db.py
 +++ b/backend/db.py
 @@ -57,6 +57,7 @@ def add_candidate(data: dict) -> str:
@@ -125,7 +303,7 @@ index 87cdee0..b1476b8 100644
          "ly_do": data.get("ly_do", ""),
          "bai_test": data.get("bai_test", ""),
          "link_phong_van": data.get("link_phong_van", ""),
-@@ -69,6 +70,10 @@ def add_candidate(data: dict) -> str:
+@@ -69,6 +70,14 @@ def add_candidate(data: dict) -> str:
          "email_id": data.get("email_id", ""),
          "topcv_cv_id": data.get("topcv_cv_id", ""),
          "topcv_link": data.get("topcv_link", ""),
@@ -133,10 +311,14 @@ index 87cdee0..b1476b8 100644
 +        "email_invite_status": data.get("email_invite_status", ""),
 +        "email_invite_sent_at": data.get("email_invite_sent_at", ""),
 +        "email_invite_error": data.get("email_invite_error", ""),
++        # Trạng thái gửi email từ chối: ""|"sent"|"failed"
++        "rejection_email_status": data.get("rejection_email_status", ""),
++        "rejection_email_sent_at": data.get("rejection_email_sent_at", ""),
++        "rejection_email_error": data.get("rejection_email_error", ""),
          "created_at": firestore.SERVER_TIMESTAMP,
      }
      _get_db().collection("candidates").document(doc_id).set(doc)
-@@ -134,9 +139,10 @@ def update_candidate_fields(candidate_id: str, fields: dict):
+@@ -134,9 +143,11 @@ def update_candidate_fields(candidate_id: str, fields: dict):
      """Update bất kỳ fields nào của candidate. Whitelist để an toàn."""
      allowed = {
          "vi_tri_ung_tuyen", "trang_thai", "tinh_trang", "quan_ly_duyet", "ly_do",
@@ -145,10 +327,11 @@ index 87cdee0..b1476b8 100644
          "ho_ten", "email", "sdt", "kinh_nghiem_nam", "truong_dai_hoc", "ky_nang",
          "ngay_nhan",
 +        "email_invite_status", "email_invite_sent_at", "email_invite_error",
++        "rejection_email_status", "rejection_email_sent_at", "rejection_email_error",
      }
      update = {k: v for k, v in fields.items() if k in allowed}
      if update:
-@@ -169,6 +175,7 @@ def _to_display(c: dict) -> dict:
+@@ -169,6 +180,7 @@ def _to_display(c: dict) -> dict:
          "Trạng thái": c.get("trang_thai", "CV mới"),
          "Tình trạng": c.get("tinh_trang", ""),
          "Quản lý duyệt": c.get("quan_ly_duyet", ""),
@@ -156,13 +339,16 @@ index 87cdee0..b1476b8 100644
          "Lý do": c.get("ly_do", ""),
          "Bài test": c.get("bai_test", ""),
          "Link phỏng vấn": c.get("link_phong_van", ""),
-@@ -179,9 +186,49 @@ def _to_display(c: dict) -> dict:
+@@ -179,9 +191,52 @@ def _to_display(c: dict) -> dict:
          "Đề xuất AI": c.get("de_xuat_ai", ""),
          "Ghi chú AI": c.get("ghi_chu_ai", ""),
          "Email ID": c.get("email_id", ""),
 +        "Email mời PV - Trạng thái": c.get("email_invite_status", ""),
 +        "Email mời PV - Gửi lúc": c.get("email_invite_sent_at", ""),
 +        "Email mời PV - Lỗi": c.get("email_invite_error", ""),
++        "Email từ chối - Trạng thái": c.get("rejection_email_status", ""),
++        "Email từ chối - Gửi lúc": c.get("rejection_email_sent_at", ""),
++        "Email từ chối - Lỗi": c.get("rejection_email_error", ""),
      }
  
  
@@ -207,9 +393,18 @@ index 87cdee0..b1476b8 100644
  
  def add_job(data: dict) -> str:
 diff --git a/frontend/index.html b/frontend/index.html
-index 61c105c..0ce514a 100644
+index 61c105c..4266ef4 100644
 --- a/frontend/index.html
 +++ b/frontend/index.html
+@@ -49,7 +49,7 @@ a{color:var(--blue);text-decoration:none}
+ .stat-card .sub{font-size:12px;color:var(--gray-400);margin-top:4px}
+ 
+ /* ── Table ── */
+-.table-wrap{background:var(--white);border-radius:var(--radius);border:1px solid var(--gray-200);box-shadow:var(--shadow);overflow:hidden}
++.table-wrap{background:var(--white);border-radius:var(--radius);border:1px solid var(--gray-200);box-shadow:var(--shadow);overflow-x:auto;overflow-y:visible}
+ .table-header{padding:16px 20px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between;gap:12px}
+ .search-input{flex:1;max-width:320px;padding:8px 14px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;font-family:inherit}
+ .search-input:focus{outline:none;border-color:var(--blue)}
 @@ -251,6 +251,7 @@ textarea.form-control{resize:vertical;min-height:120px}
      <h2 id="pageTitle">Danh sách ứng viên</h2>
      <div style="display:flex;gap:10px">
@@ -290,7 +485,13 @@ index 61c105c..0ce514a 100644
    if (tab === 'dashboard') {
      mainBtn.textContent = '↻ Làm mới';
      mainBtn.onclick = () => { refreshData(); setTimeout(renderDashboard, 500); };
-@@ -707,13 +766,17 @@ function renderCandidates(list) {
+@@ -703,17 +762,25 @@ function renderCandidates(list) {
+     return;
+   }
+   document.getElementById('candidateTableContainer').innerHTML = `
+-  <table style="font-size:13px">
++  <div style="overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch">
++  <table style="font-size:13px;min-width:1600px">
      <thead><tr>
        <th>Ứng viên</th><th>Vị trí</th><th>Nguồn</th><th>Ngày</th>
        <th>Trạng thái</th><th>Tình trạng</th><th>AI đánh giá</th>
@@ -306,10 +507,13 @@ index 61c105c..0ce514a 100644
 +      const emailStatus = c['Email mời PV - Trạng thái']||'';
 +      const emailSentAt = c['Email mời PV - Gửi lúc']||'';
 +      const emailError = c['Email mời PV - Lỗi']||'';
++      const rejStatus = c['Email từ chối - Trạng thái']||'';
++      const rejSentAt = c['Email từ chối - Gửi lúc']||'';
++      const rejError = c['Email từ chối - Lỗi']||'';
        return `<tr>
          <td class="name-cell" onclick="openCandidate('${id}')" style="cursor:pointer"><strong>${escapeHtml(c['Họ tên']||'N/A')}</strong><span>${escapeHtml(c['Email']||'')}</span></td>
          <td><select class="inline-select" onchange="patchField('${id}','vi_tri_ung_tuyen',this.value)" onclick="event.stopPropagation()">
-@@ -736,9 +799,36 @@ function renderCandidates(list) {
+@@ -736,9 +803,67 @@ function renderCandidates(list) {
            </select>
          </td>
          <td>${c['Điểm AI']?`<span class="score-chip ${scoreClass(c['Điểm AI'])}">${c['Điểm AI']}/100</span>`:'—'}</td>
@@ -323,21 +527,52 @@ index 61c105c..0ce514a 100644
          <td>${baiTest?`<a href="${escapeHtml(baiTest)}" target="_blank" style="font-size:12px">🔗 Mở</a>`:'<span style="color:var(--gray-400);font-size:12px">—</span>'}</td>
          <td>${pvFile?`<a href="${escapeHtml(pvFile)}" target="_blank" style="font-size:12px">📋 Xem</a>`:'<span style="color:var(--gray-400);font-size:12px">—</span>'}</td>
          <td title="${escapeHtml(lyDo)}" style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(lyDo.substring(0,30))||'—'}</td>
-+        <td style="font-size:12px;min-width:170px">
++        <td style="font-size:12px;min-width:180px">
 +          ${(() => {
-+            if (emailStatus === 'sent') {
-+              return `<div style="color:#16a34a;font-weight:600">✅ Đã gửi email PV cho ứng viên</div>
-+                <div style="font-size:10px;color:var(--gray-500);margin-top:2px">${escapeHtml(emailSentAt)}</div>
-+                <button class="btn btn-ghost btn-sm" style="margin-top:4px;font-size:11px" title="Gửi lại email mời PV" onclick="event.stopPropagation();sendInviteEmail('${id}', true)">↻ Gửi lại</button>`;
++            // Helper: parse "DD/MM/YYYY HH:MM" → epoch ms (để so sánh recency)
++            const parseTs = (s) => {
++              if (!s) return 0;
++              const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
++              return m ? new Date(`${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}:00`).getTime() : 0;
++            };
++            const inviteTs = parseTs(emailSentAt);
++            const rejTs    = parseTs(rejSentAt);
++            // Action gần đây nhất quyết định display (theo timestamp)
++            const inviteIsLatest = inviteTs >= rejTs;
++
++            const renderInvite = () => {
++              if (emailStatus === 'sent') {
++                return `<div style="color:#16a34a;font-weight:600">✅ Đã gửi email PV cho ứng viên</div>
++                  <div style="font-size:10px;color:var(--gray-500);margin-top:2px">${escapeHtml(emailSentAt)}</div>
++                  <button class="btn btn-ghost btn-sm" style="margin-top:4px;font-size:11px" title="Gửi lại email mời PV" onclick="event.stopPropagation();sendInviteEmail('${id}', true)">↻ Gửi lại</button>`;
++              }
++              return `<div style="color:#dc2626;font-weight:600" title="${escapeHtml(emailError)}">❌ Lỗi gửi mời PV</div>
++                <div style="font-size:10px;color:var(--gray-500);margin-top:2px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(emailError)}">${escapeHtml(emailError.substring(0,40))}</div>
++                <button class="btn btn-sm" style="margin-top:4px;font-size:11px;background:#dc2626;color:#fff" title="Gửi lại email mời PV" onclick="event.stopPropagation();sendInviteEmail('${id}', true)">↻ Gửi lại</button>`;
++            };
++            const renderRej = () => {
++              if (rejStatus === 'sent') {
++                return `<div style="color:#dc2626;font-weight:600">📨 Đã gửi mail từ chối</div>
++                  <div style="font-size:10px;color:var(--gray-500);margin-top:2px">${escapeHtml(rejSentAt)}</div>
++                  <button class="btn btn-ghost btn-sm" style="margin-top:4px;font-size:11px" title="Gửi lại email từ chối" onclick="event.stopPropagation();sendRejectionEmail('${id}', true)">↻ Gửi lại</button>`;
++              }
++              return `<div style="color:#dc2626;font-weight:600" title="${escapeHtml(rejError)}">❌ Lỗi gửi từ chối</div>
++                <div style="font-size:10px;color:var(--gray-500);margin-top:2px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(rejError)}">${escapeHtml(rejError.substring(0,40))}</div>
++                <button class="btn btn-sm" style="margin-top:4px;font-size:11px;background:#dc2626;color:#fff" title="Gửi lại email từ chối" onclick="event.stopPropagation();sendRejectionEmail('${id}', true)">↻ Gửi lại</button>`;
++            };
++
++            // Ưu tiên hiển thị action gần đây nhất
++            if (emailStatus && rejStatus) {
++              return inviteIsLatest ? renderInvite() : renderRej();
 +            }
-+            if (emailStatus === 'failed') {
-+              return `<div style="color:#dc2626;font-weight:600" title="${escapeHtml(emailError)}">❌ Gửi thất bại</div>
-+                <div style="font-size:10px;color:var(--gray-500);margin-top:2px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(emailError)}">${escapeHtml(emailError.substring(0,40))}</div>
-+                <button class="btn btn-sm" style="margin-top:4px;font-size:11px;background:#dc2626;color:#fff" title="Gửi lại email mời PV" onclick="event.stopPropagation();sendInviteEmail('${id}', true)">↻ Gửi lại Email</button>`;
++            if (emailStatus) return renderInvite();
++            if (rejStatus)   return renderRej();
++
++            // ─── Chưa gửi gì → nút action tuỳ tình huống ─────────────
++            if ((c['Tình trạng']||'') === 'Không phù hợp') {
++              return `<button class="btn btn-sm" style="font-size:11px;background:#dc2626;color:#fff" title="Gửi email từ chối ngay" onclick="event.stopPropagation();sendRejectionEmail('${id}', false)">📨 Gửi từ chối</button>`;
 +            }
-+            // Chưa gửi → cho phép gửi thủ công
-+            const canSend = (c['Trạng thái']==='Quản lý đã duyệt' && c['Tình trạng']==='Phù hợp' && (c['Lịch PV']||'').trim());
-+            if (canSend) {
++            if (c['Trạng thái']==='Quản lý đã duyệt' && c['Tình trạng']==='Phù hợp' && (c['Lịch PV']||'').trim()) {
 +              return `<button class="btn btn-primary btn-sm" style="font-size:11px" title="Gửi email mời PV ngay" onclick="event.stopPropagation();sendInviteEmail('${id}', false)">✉️ Gửi mời PV</button>`;
 +            }
 +            return `<span style="color:var(--gray-400);font-size:11px">—</span>`;
@@ -346,10 +581,15 @@ index 61c105c..0ce514a 100644
          <td style="white-space:nowrap">
            ${c['Link CV']?`<button class="btn btn-primary btn-sm" title="Mở CV PDF" onclick="event.stopPropagation();viewCV('${id}')">📄</button>`:''}
            <button class="btn btn-sm" style="background:#0891b2;color:#fff" title="Gửi vào nhóm Lark" onclick="event.stopPropagation();sendToLark('${id}','${escapeHtml((c['Họ tên']||'').replace(/'/g,''))}')">💬</button>
-@@ -750,6 +840,28 @@ function renderCandidates(list) {
-   </table>`;
- }
- 
+@@ -747,7 +872,30 @@ function renderCandidates(list) {
+         </td>
+       </tr>`;
+     }).join('')}</tbody>
+-  </table>`;
++  </table>
++  </div>`;
++}
++
 +// "HH:mm dd/MM/yyyy" → ISO "yyyy-MM-ddTHH:mm" for input datetime-local
 +function toIsoLocal(vnFormat) {
 +  if (!vnFormat) return '';
@@ -370,12 +610,10 @@ index 61c105c..0ce514a 100644
 +  const c = allCandidates.find(x => x['ID'] === id);
 +  if (c) c['Lịch PV'] = vnVal;
 +  setTimeout(() => renderCandidates(allCandidates), 200);
-+}
-+
+ }
+ 
  async function patchField(id, field, value) {
-   try {
-     await fetch(`${API_BASE}/api/candidates/${id}`, {
-@@ -758,13 +870,46 @@ async function patchField(id, field, value) {
+@@ -758,13 +906,82 @@ async function patchField(id, field, value) {
      });
      const c = allCandidates.find(x=>x['ID']===id);
      if (c) {
@@ -387,6 +625,42 @@ index 61c105c..0ce514a 100644
    } catch(e) { showToast('Lỗi cập nhật: '+e.message); }
  }
  
++async function sendRejectionEmail(id, force) {
++  const c = allCandidates.find(x => x['ID'] === id);
++  const name = c ? (c['Họ tên'] || 'ứng viên') : 'ứng viên';
++  const confirmMsg = force
++    ? `Gửi LẠI email từ chối cho ${name}?`
++    : `Gửi email TỪ CHỐI cho ${name}?\n\nỨng viên sẽ nhận thư báo "chưa phù hợp" và lưu hồ sơ.`;
++  if (!confirm(confirmMsg)) return;
++  showToast(`⏳ Đang gửi email từ chối cho ${name}...`);
++  try {
++    const r = await fetch(`${API_BASE}/api/candidates/${id}/send-rejection-email`, {
++      method:'POST',
++      headers:{'Content-Type':'application/json','X-API-Key':apiToken},
++      body: JSON.stringify({force: !!force}),
++    });
++    const d = await r.json();
++    if (d.ok) {
++      showToast(`📨 Đã gửi email từ chối cho ${name}`);
++      if (c) {
++        c['Email từ chối - Trạng thái'] = 'sent';
++        c['Email từ chối - Gửi lúc'] = d.sent_at || '';
++        c['Email từ chối - Lỗi'] = '';
++      }
++    } else {
++      const err = d.error || 'Lỗi không rõ';
++      showToast(`❌ Gửi thất bại: ${err}`);
++      if (c) {
++        c['Email từ chối - Trạng thái'] = 'failed';
++        c['Email từ chối - Lỗi'] = err;
++      }
++    }
++    renderCandidates(allCandidates);
++  } catch(e) {
++    showToast('❌ Lỗi gọi API: ' + e.message);
++  }
++}
++
 +async function sendInviteEmail(id, force) {
 +  const c = allCandidates.find(x => x['ID'] === id);
 +  const name = c ? (c['Họ tên'] || 'ứng viên') : 'ứng viên';
@@ -423,7 +697,7 @@ index 61c105c..0ce514a 100644
  async function uploadAttachment(id, kind, inputId) {
    const input = document.getElementById(inputId);
    const file = input?.files?.[0];
-@@ -986,6 +1131,78 @@ function viewJob(id) {
+@@ -986,6 +1203,78 @@ function viewJob(id) {
    document.getElementById('overlay').classList.add('show');
  }
  

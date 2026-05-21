@@ -1,0 +1,387 @@
+================================================================================
+LICH SU CHAT VOI CLAUDE CODE - BTVN BUOI 4
+Hoc vien: Nguyen Thi Ngoc Linh - HRM SEONGON
+Ngay: 20/05/2026 - 21/05/2026
+Topic: Xay 2 Agent tu dong cho webapp HRM (Invite + Rejection)
+================================================================================
+
+
+
+--------------------------------------------------------------------------------
+GIAI DOAN 1 - TAO AGENT GUI THU MOI PHONG VAN
+--------------------------------------------------------------------------------
+
+User: "Toi muon lam 1 con Agent."
+
+Claude: Hoi 4 cau de hieu yeu cau:
+  1. Muc dich
+  2. Input/Output
+  3. Khi nao chay
+  4. Tich hop he thong nao
+
+User cung cap:
+  1. Muc dich: Tu dong hoa tuyen dung
+  2. Nguon: https://ngoclinhhrm.com/tuyen-dung/
+  3. Trigger: Ung vien "Quan ly da duyet" + "Phu hop" + co Lich PV
+     -> gui email moi PV cho ung vien
+  4. Tich hop:
+     - Skill /auto-send-email gui qua tuyendung@seongon.com
+     - Skill /lark-setup-bot bao Lark IM cho HRM
+     - Skill /lark-calendar-pv add lich Lark Calendar
+
+Claude xay dung initial agent (interview_invite_agent.py) doc Lark Base,
+loc theo 3 dieu kien, gui email + Lark IM + Calendar event.
+
+
+
+--------------------------------------------------------------------------------
+GIAI DOAN 2 - CHUYEN TU GMAIL API SANG LARK MAIL
+--------------------------------------------------------------------------------
+
+User: "tuyendung@seongon.com la Lark mail. Su dung skill Lark Mail de gui."
+
+Claude phat hien skill auto-send-email goc viet cho Gmail API. Refactor:
+  - Bo Google API client
+  - Dung Lark Mail OpenAPI endpoint:
+    POST /open-apis/mail/v1/user_mailboxes/{encoded_email}/messages/send
+  - Auth bang user_access_token (OAuth)
+  - Bo phan dung tenant token (Lark Mail khong chap nhan)
+
+User: "Toi co quyen voi Lark mail tuyendung@seongon.com roi. Ban xong chua de
+toi test?"
+
+Claude huong dan setup OAuth re-auth qua browser.
+
+
+
+--------------------------------------------------------------------------------
+GIAI DOAN 3 - TIM RA NGUON DATA THUC TE CUA HRM
+--------------------------------------------------------------------------------
+
+Khi chay agent lan dau, Claude phat hien Lark Base CV chi co 10 field co ban
+(Ho ten, Email, Vi tri, Nguon, Ngay nhan, CV, HR note, Kinh nghiem, Truong DH).
+KHONG co cac field "Trang thai", "Tinh trang", "Lich PV" hien tren dashboard.
+
+Ket luan: HRM dashboard tai ngoclinhhrm.com co database rieng, KHONG dung
+Lark Base.
+
+Claude tim ra HRM API thuc tu skill hrm-loc-ung-vien:
+  Endpoint: https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates
+  Auth: X-API-Key: seongon-hrm-2024
+
+Test API: tra ve 85 ung vien, trong do co "Linh Test" voi day du field can.
+
+Claude rewrite agent dung HRM API thay vi Lark Base.
+
+
+
+--------------------------------------------------------------------------------
+GIAI DOAN 4 - FIX OAUTH SCOPE (Bug code 20043)
+--------------------------------------------------------------------------------
+
+Agent chay den buoc gui mail thi loi:
+  code=20043 - "mail:user_mailbox.message... error. Please edit and try again."
+
+Nghia la: App Lark chua duoc cap cac scope mail.
+
+User cho phep Claude tu dieu khien browser de lam:
+  "Toi co quyen admin. Toi uy quyen ban dung may tinh toi. Tu lam di."
+
+Claude dung Chrome MCP tool:
+  1. Mo Lark Developer Console (cli_a97b4c1583f8ded1)
+  2. Vao Permissions & Scopes -> Add permission scopes
+  3. Tim scope chinh xac: mail:user_mailbox.message:send
+     (khong phai :send_as nhu doan ban dau)
+  4. Tick checkbox -> Add
+  5. Create Version 1.3.5 voi reason ro rang
+  6. Submit for release
+  7. Tu mo Lark Admin Console -> App Review
+  8. Click Approve cho version 1.3.5
+
+Sau do mo URL OAuth authorize voi scope dung:
+  - mail:user_mailbox.message:send
+  - mail:user_mailbox.message:readonly
+  - mail:user_mailbox.message.body:read
+  - calendar:calendar
+
+Bug 20029 (Invalid redirect URL) -> Claude them
+https://open.larksuite.com/api-explorer/loading vao Security Settings.
+
+User authorize -> Claude bat code tu URL redirect -> exchange code -> luu
+refresh token vao .env.
+
+Agent chay lai:
+  HRM: 85 total -> 1 ung vien du dieu kien
+  Xu ly: Linh Test (id=5953c667)
+  Lark mail [user_token] sent -> ngoclinhk47u1@gmail.com
+  Lark IM sent
+  Calendar event created
+  === Xong: 1 email moi da gui ===
+
+
+
+--------------------------------------------------------------------------------
+GIAI DOAN 5 - FIX BUG EMAIL BODY HIEN BASE64
+--------------------------------------------------------------------------------
+
+User check inbox -> nhan duoc email nhung body la chuoi base64 dai
+("PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6QXJpYWwsc2Fucy1zZXJpZjt...")
+
+Nguyen nhan: Claude da b64encode body_html truoc khi gui. Lark Mail API
+khong decode base64 (khac Gmail API).
+
+Fix: bo base64.b64encode(), gui plain HTML truc tiep.
+
+Gui lai -> body hien thi dung dinh dang HTML.
+
+
+
+--------------------------------------------------------------------------------
+GIAI DOAN 6 - THEM COT "DA GUI EMAIL" + NUT "GUI LAI"
+--------------------------------------------------------------------------------
+
+User: "Bo sung cho toi 1 cot the hien da gui Email. Them nut Gui lai email
+neu gui email loi thi bam gui lai."
+
+Claude phat hien source code HRM tai /Users/Ngoclinh/Desktop/hrm-system/:
+  - Backend Flask (Python) -> Cloud Run
+  - Frontend HTML/JS -> Cloudflare Pages
+
+Implement:
+  Backend db.py: them 3 field email_invite_status / sent_at / error
+  Backend app.py: endpoint POST /api/candidates/{id}/send-invite-email
+  Backend lark_mail.py: tao module moi reuse user token tu email_reader.py
+  Frontend index.html: them cot "Da gui Email" + nut "Gui mời PV" / "Gửi lại"
+  Agent: PATCH HRM sau khi gui email de hien status real-time
+
+Deploy:
+  Backend: gcloud run deploy -> hrm-api-00054-dh8
+  Frontend: wrangler pages deploy
+
+Verify: cot hien dung trang thai sent + timestamp + nut Gui lai.
+
+
+
+--------------------------------------------------------------------------------
+GIAI DOAN 7 - DONG GOI BTVN BUOI 4 LAN 1 + SEED 5 UNG VIEN TEST
+--------------------------------------------------------------------------------
+
+User: "Tao them cho toi 5 ban Linh test voi Email ngoclinhk47u1@gmail.com vao
+bo sung vao Dashboard tuyen dung. De toi giao nhiem vu tiep theo."
+
+Claude viet script seed_test_candidates.py dung db.add_candidate() de tao
+5 ung vien voi 5 vi tri khac nhau:
+  - Linh Test 2 - SEO Manager
+  - Linh Test 3 - Google Ads Lead
+  - Linh Test 4 - Account Manager
+  - Linh Test 5 - Content SEO
+  - Linh Test 6 - Data Analyst Marketing
+
+Tat ca set sang "Quan ly da duyet" + "Phu hop" + Lich PV trong 1-3 ngay toi
+-> san sang test agent.
+
+
+
+--------------------------------------------------------------------------------
+GIAI DOAN 8 - AGENT #2: TU DONG GUI THU TU CHOI
+--------------------------------------------------------------------------------
+
+User: "Toi muon lam Agent thu 2. La Agent tu dong gui mail 'Chua phu hop' neu
+ban ung vien co Tinh trang 'Chua phu hop'. Va gui mail xong thi bao vao trong
+Bot Chat Lark cho toi.
+
+Truoc khi lam thi bao cho toi biet quy trinh lam va ban se dung nhung skill
+nao nhe."
+
+Claude bao kế hoach truoc khi lam:
+
+  Quy trinh:
+    1. Polling HRM API moi 30 phut
+    2. Filter ung vien: Tinh trang = "Khong phu hop" + chua sent rejection
+    3. Voi moi ung vien match:
+       a. Gui email tu choi (Template 3) qua Lark Mail
+       b. Bao Lark IM cho HRM
+       c. PATCH HRM rejection_email_status=sent
+
+  Skills su dung:
+    - auto-send-email (Template 3)
+    - lark-setup-bot (gui Lark IM)
+    - hrm-cap-nhat-ung-vien (PATCH status)
+
+  File se tao/sua:
+    - rejection_mail_agent.py (NEW)
+    - rejection_scheduler.py (NEW)
+    - backend/db.py (them 3 field rejection_email_*)
+    - backend/lark_mail.py (them send_rejection_email)
+    - backend/app.py (them endpoint POST /send-rejection-email)
+    - frontend/index.html (them cot "Email tu choi" + nut)
+
+Implement xong, deploy backend + frontend.
+
+
+
+--------------------------------------------------------------------------------
+GIAI DOAN 9 - TEST AGENT #2 + GOP COT VAO "DA GUI EMAIL"
+--------------------------------------------------------------------------------
+
+User: "Cach 1" (test tren dashboard - doi Tinh trang cua 1 ung vien sang
+"Khong phu hop")
+
+Claude chay agent rejection_mail_agent.py -> gui 5 email tu choi cho Linh
+Test 2-6 (tat ca cung email ngoclinhk47u1@gmail.com).
+
+User: "Chua thay update cot nay" -> Claude check cot Email tu choi chi
+hien khi browser refresh hard.
+
+User: "Khong keo qua phai duoc. Va toi muon hien thi o cot Da gui email."
+
+Claude gop 2 cot thanh 1 cot "Da gui Email" voi smart display:
+  - Uu tien 1: Rejection (neu da gui)
+  - Uu tien 2: Invite (neu da gui)
+  - Uu tien 3: Nut action theo Tinh trang
+  - Cuoi cung: "-"
+
+Deploy lai frontend.
+
+User: "Toi khong luot qua phai trang webapp nay duoc."
+
+Claude phat hien CSS `.table-wrap{overflow:hidden}` chan horizontal scroll.
+Fix: doi sang `overflow-x:auto; overflow-y:visible` + them `min-width:1600px`
+cho table.
+
+
+
+--------------------------------------------------------------------------------
+GIAI DOAN 10 - 2 AGENT CHAY DONG THOI + REAL-TIME TRIGGER
+--------------------------------------------------------------------------------
+
+User: "Toi muon webapp chay dong thoi 2 Agent tren. Toi co the doi trang
+thai ung vien. Neu doi trang thai ung vien la tu 'phu hop' sang 'tu choi'
+thi se gui email tu choi ung vien."
+
+Claude bao ke hoach truoc khi lam (2 lop):
+
+  Lop 1 - Real-time backend trigger:
+    Khi PATCH /api/candidates/{id} thay doi Tinh trang -> backend tu detect
+    va goi background thread gui mail tuong ung NGAY.
+
+  Lop 2 - Cron scheduler local (du phong):
+    dual_agent_scheduler.py chay ca 2 agent moi 30 phut, bat case lot luoi.
+
+Implement:
+  - Trong update_candidate route: snapshot trước + sau, detect transition
+  - Trigger gui rejection neu Tinh trang doi sang "Khong phu hop"
+  - Trigger gui invite neu du 3 DK (Quan ly da duyet + Phu hop + Lich PV)
+
+Deploy: hrm-api-00056-q92.
+
+
+
+--------------------------------------------------------------------------------
+GIAI DOAN 11 - FIX 99991679 + LARK IM TRONG TRIGGER
+--------------------------------------------------------------------------------
+
+User test: doi 1 ung vien sang "Khong phu hop" tren dashboard.
+Backend trigger duoc nhung mail send loi: Lark API code=99991679 (Unauthorized).
+
+Nguyen nhan: Backend dung token Firestore (cu, khong sync). Local .env co
+token moi.
+
+Claude tao sync_lark_token.py:
+  1. Doc CV_LARK_USER_REFRESH_TOKEN tu local .env
+  2. Refresh de lay access_token moi
+  3. Ghi sang Firestore lark_tokens/tuyendung
+  4. Save rotated refresh_token lai .env
+
+Run script -> sync xong. Test backend endpoint -> gui thanh cong.
+
+User: "Khi chuyen sang 'Phu hop' lai chua chay gui Email Thu moi phong van."
+
+Claude phat hien trigger check `email_invite_status != "sent"` -> vi Linh
+Test da sent invite truoc do nen skip.
+
+Fix: detect transition. Neu transition vao trang thai target -> force=True
+de re-send bo qua check da sent.
+
+Deploy: hrm-api-00057-4wt.
+
+User: "Da nhan duoc email Thu moi PV nhung khong thay doi trang thai da gui
+Email thu moi PV tren file. Va khong thay gui den Chat Lark."
+
+2 bug con lai:
+  1. Frontend uu tien hien rejection > invite cung nhac, du timestamp invite
+     moi hon.
+  2. Backend trigger chi gui mail, khong gui Lark IM (chi local agent co).
+
+Fix:
+  - Backend: them function send_lark_im(text) trong lark_mail.py, goi sau
+    moi lan _trigger_send_invite / _trigger_send_rejection thanh cong.
+  - Set env var CV_NOTIFY_USER_ID tren Cloud Run.
+  - Frontend: parse timestamp ca 2 status, hien cai nao moi hon.
+
+Deploy:
+  - Backend: hrm-api-00059-j8f (kem env CV_NOTIFY_USER_ID)
+  - Frontend: cloudflare pages
+
+User test cuoi: "Okie ban. Da sua chuan roi. Thong ke lai ket qua Webapp."
+
+
+
+--------------------------------------------------------------------------------
+TONG KET
+--------------------------------------------------------------------------------
+
+Production live:
+  Dashboard: https://ngoclinhhrm.com/tuyen-dung/
+  API:       https://hrm-api-521103150103.asia-southeast1.run.app
+  Database:  Firestore (project seongon-cv-tool)
+
+Stack:
+  Frontend: HTML + JS, Cloudflare Pages
+  Backend:  Flask + Cloud Run (Python)
+  Database: Google Firestore
+  Email:    Lark Mail (tuyendung@seongon.com)
+  Chat:     Lark IM (HR SEONGON Bot v1.3.5)
+  Calendar: Lark Calendar
+  AI:       Claude API
+  Storage:  Google Cloud Storage
+
+2 Agent dang chay:
+  Agent #1 - Interview Invite Agent (gui thu moi PV)
+  Agent #2 - Rejection Mail Agent (gui thu tu choi)
+
+Trigger:
+  Lop 1: Real-time backend (chay ngay khi PATCH HRM)
+  Lop 2: Cron 30 phut (du phong)
+
+Smart logic:
+  - Detect transition (toggle Phu hop <-> Khong phu hop -> gui dung mail)
+  - Force re-send khi transition (khong silent skip)
+  - UI hien action moi nhat theo timestamp
+  - Dedup local + remote (tranh gui trung)
+  - Auto rotate + save Lark refresh token
+
+So lieu thuc te:
+  Tong ung vien:           90
+  Da gui email moi PV:     1 luot
+  Da gui email tu choi:    6 luot
+  Lark IM bao HRM:         7 luot
+  Lark Calendar event:     1
+  Email thuc te toi inbox ngoclinhk47u1@gmail.com: 7 mail (verified)
+
+4 Bug da fix:
+  1. code=20043 - App thieu scope mail:user_mailbox.message:send
+  2. code=99991663 - Lark Mail khong nhan tenant token
+  3. Body email base64 - Lark Mail khong decode base64
+  4. code=99991679 + transition skip - Token Firestore cu + trigger skip
+
+Codebase: ~4,200 dong code thuc.
+  backend/app.py:        1,273 dong
+  backend/db.py:           320 dong
+  backend/lark_mail.py:    204 dong
+  frontend/index.html:   1,784 dong
+  agent code (Lark Bot): ~600 dong
+
+================================================================================
+KET THUC LICH SU
+================================================================================

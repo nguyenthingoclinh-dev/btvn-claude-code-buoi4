@@ -1,22 +1,30 @@
-# Chat history với Claude Code
+# Chat history voi Claude Code
 
-File này hướng dẫn cách lấy file `.txt` ghi chép lại toàn bộ cuộc trò chuyện với Claude Code (theo yêu cầu BTVN buổi 4 - mục 2).
+## File chinh
 
-## Lấy file chat history
+[`chat-history-clean.txt`](./chat-history-clean.txt) — bien ban session da clean
+(plain text, khong icon, tom tat theo 11 giai doan logic cua session).
 
-Trong Claude Code, gõ:
-```
-/export
-```
+## Noi dung session
 
-Sau đó **save file `.txt` xuất ra vào folder này** với tên:
-```
-chat-history-2026-05-20-build-interview-agent.txt
-```
+- **Bat dau:** 20/05/2026 21:30
+- **Ket thuc:** 21/05/2026 03:00
+- **Topic:** Xay 2 Agent tu dong cho webapp HRM SEONGON
+  - Agent #1: gui thu moi phong van (Interview Invite Agent)
+  - Agent #2: gui thu tu choi (Rejection Mail Agent)
+- **Bug da fix:** 4 (scope OAuth, tenant token, base64 body, token sync)
+- **Deploy:** Cloud Run rev 00059-j8f + Cloudflare Pages
 
-## Nội dung phiên này
-- **Bắt đầu:** 21:30 ngày 20/05/2026
-- **Kết thúc:** 23:00 ngày 20/05/2026
-- **Topic:** Xây Interview Invite Agent + thêm cột "Đã gửi Email" vào HRM dashboard
-- **Bug đã fix:** 3 (refresh token, scope mail, base64 body)
-- **Deploy:** Cloud Run rev 00054-dh8 + Cloudflare Pages
+## 11 giai doan logic
+
+1. Tao Agent gui thu moi phong van (initial)
+2. Chuyen tu Gmail API sang Lark Mail
+3. Tim ra HRM API thuc (khong phai Lark Base)
+4. Fix OAuth scope (bug 20043) - tu dong dien browser cap quyen
+5. Fix bug body base64
+6. Them cot "Da gui Email" + nut "Gui lai" vao dashboard
+7. Dong goi BTVN buoi 4 lan 1 + seed 5 ung vien test
+8. Agent #2: tu dong gui thu tu choi
+9. Test + gop 2 cot thanh 1 cot
+10. 2 Agent chay dong thoi + real-time trigger backend
+11. Fix 99991679 + Lark IM trong trigger

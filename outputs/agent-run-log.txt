@@ -1,87 +1,137 @@
-═══════════════════════════════════════════════════════════════════════════════
-INTERVIEW INVITE AGENT — RUN LOG
-Ngày chạy: 20/05/2026 22:47-22:48 (GMT+7)
-═══════════════════════════════════════════════════════════════════════════════
+================================================================================
+DUAL AGENT - RUN LOG (Invite + Rejection)
+Ngay chay: 20/05/2026 - 21/05/2026 (GMT+7)
+================================================================================
 
-▶ Lệnh chạy:
+
+--------------------------------------------------------------------------------
+AGENT #1 - INTERVIEW INVITE AGENT
+--------------------------------------------------------------------------------
+
+Lenh chay:
 $ cd /Users/Ngoclinh/Desktop/Lark\ Bot
 $ .venv/bin/python interview_invite_agent.py
 
-▶ Output:
-2026-05-20 22:47:55,001 [INFO] interview-agent — === Interview Agent: bắt đầu quét ===
-2026-05-20 22:47:55,642 [INFO] interview-agent — HRM: 85 total → 1 ứng viên đủ điều kiện
-2026-05-20 22:47:55,643 [INFO] interview-agent — Xử lý: Linh Test (id=5953c667)
-2026-05-20 22:47:56,111 [INFO] interview-agent — Lark refresh token đã rotate, đã lưu lại .env
-2026-05-20 22:47:57,209 [INFO] interview-agent — ✉️  Lark mail [user_token] sent → ngoclinhk47u1@gmail.com (msg_id=OGQ4OWUyYmItMjIwMi00YTdjLWE5MGUtYzYzOWFhY2I5ZWRm)
-2026-05-20 22:47:57,929 [INFO] interview-agent — 💬 Lark IM sent
-2026-05-20 22:47:58,930 [INFO] interview-agent — 📅 Calendar event created: c38bea1f-f7bf-440e-942a-6e0e61da7921_0
-2026-05-20 22:47:58,931 [INFO] interview-agent — === Xong: 1 email mới đã gửi ===
+Output:
+2026-05-20 22:47:55,001 [INFO] interview-agent - === Interview Agent: bat dau quet ===
+2026-05-20 22:47:55,642 [INFO] interview-agent - HRM: 85 total -> 1 ung vien du dieu kien
+2026-05-20 22:47:55,643 [INFO] interview-agent - Xu ly: Linh Test (id=5953c667)
+2026-05-20 22:47:56,111 [INFO] interview-agent - Lark refresh token da rotate, da luu lai .env
+2026-05-20 22:47:57,209 [INFO] interview-agent - Lark mail [user_token] sent -> ngoclinhk47u1@gmail.com (msg_id=OGQ4OWUyYmItMjIwMi00YTdjLWE5MGUtYzYzOWFhY2I5ZWRm)
+2026-05-20 22:47:57,929 [INFO] interview-agent - Lark IM sent
+2026-05-20 22:47:58,930 [INFO] interview-agent - Calendar event created: c38bea1f-f7bf-440e-942a-6e0e61da7921_0
+2026-05-20 22:47:58,931 [INFO] interview-agent - === Xong: 1 email moi da gui ===
 
-═══════════════════════════════════════════════════════════════════════════════
-KẾT QUẢ XÁC NHẬN
-═══════════════════════════════════════════════════════════════════════════════
 
-[1] Email gửi tới ứng viên — XÁC NHẬN ✅
-   From:    Phòng Tuyển dụng SEONGON <tuyendung@seongon.com>
-   To:      Linh Test <ngoclinhk47u1@gmail.com>
-   Subject: [SEONGON] Thư mời phỏng vấn vị trí CTO - Giám Đốc Công Nghệ
-   Body:    HTML thật, render đúng (đã fix bug base64)
-   Bằng chứng: outputs/email-received.png
+--------------------------------------------------------------------------------
+AGENT #2 - REJECTION MAIL AGENT
+--------------------------------------------------------------------------------
 
-[2] Lark IM gửi cho HRM — XÁC NHẬN ✅
-   To:   Nguyễn Thị Ngọc Linh (oc_6818d2b1d43d009c86321f55f3224f7c)
-   Body: "✅ Đã gửi thư mời phỏng vấn
-          • Ứng viên: Linh Test
-          • Vị trí: CTO - Giám Đốc Công Nghệ
-          • Lịch PV: Thứ Năm, 21/05/2026 lúc 10:30
-          • Email: ngoclinhk47u1@gmail.com"
+Lenh chay:
+$ cd /Users/Ngoclinh/Desktop/Lark\ Bot
+$ .venv/bin/python rejection_mail_agent.py
 
-[3] Lark Calendar event — XÁC NHẬN ✅
-   Summary:  PV | Linh Test — CTO - Giám Đốc Công Nghệ
+Output:
+2026-05-21 08:43:02,589 [INFO] rejection-agent - === Rejection Agent: bat dau quet ===
+2026-05-21 08:43:03,291 [INFO] rejection-agent - HRM: 90 total -> 5 ung vien can gui mail tu choi
+2026-05-21 08:43:03,291 [INFO] rejection-agent - Xu ly tu choi: Linh Test 6 - Data Analyst (id=8a0d0844)
+2026-05-21 08:43:03,807 [INFO] interview-agent - Lark refresh token da rotate, da luu lai .env
+2026-05-21 08:43:05,308 [INFO] rejection-agent - Rejection mail [user_token] sent -> ngoclinhk47u1@gmail.com (msg_id=ZWQ4NTg3MTktZWQ1NS00Y2NjLWFhNzktYjdlYjNiYTlkMDNi)
+2026-05-21 08:43:06,267 [INFO] interview-agent - Lark IM sent
+2026-05-21 08:43:06,267 [INFO] rejection-agent - Xu ly tu choi: Linh Test 5 - Content SEO (id=36b74930)
+2026-05-21 08:43:07,343 [INFO] rejection-agent - Rejection mail [user_token] sent -> ngoclinhk47u1@gmail.com (msg_id=YTRkYjc5NzItMWQxOC00Zjg3LTk4NGUtZTZjN2JhOWIzOTZm)
+2026-05-21 08:43:08,364 [INFO] interview-agent - Lark IM sent
+2026-05-21 08:43:08,364 [INFO] rejection-agent - Xu ly tu choi: Linh Test 4 - Account Manager (id=faa82ee3)
+2026-05-21 08:43:09,497 [INFO] rejection-agent - Rejection mail [user_token] sent -> ngoclinhk47u1@gmail.com (msg_id=ZDA1NzAyMGUtOWI0Mi00ZmI0LWFlNzItMGU3YzY1MjE5NjUx)
+2026-05-21 08:43:10,657 [INFO] interview-agent - Lark IM sent
+2026-05-21 08:43:10,657 [INFO] rejection-agent - Xu ly tu choi: Linh Test 3 - Google Ads Lead (id=1a188a6b)
+2026-05-21 08:43:11,900 [INFO] rejection-agent - Rejection mail [user_token] sent -> ngoclinhk47u1@gmail.com (msg_id=MzQwYjY5MTItZTJkOS00MmM1LThhMWQtZmUxYWJjMjBjMTUy)
+2026-05-21 08:43:12,619 [INFO] interview-agent - Lark IM sent
+2026-05-21 08:43:12,619 [INFO] rejection-agent - Xu ly tu choi: Linh Test 2 - SEO Manager (id=defa5795)
+2026-05-21 08:43:13,650 [INFO] rejection-agent - Rejection mail [user_token] sent -> ngoclinhk47u1@gmail.com (msg_id=MzVhY2JhZmEtNTRhNi00MTgyLWI2OTMtMGUyYjIzZjcyMmQ0)
+2026-05-21 08:43:14,316 [INFO] interview-agent - Lark IM sent
+2026-05-21 08:43:14,317 [INFO] rejection-agent - === Xong: 5 email tu choi moi da gui ===
+
+
+--------------------------------------------------------------------------------
+REAL-TIME TRIGGER (backend) - test toggle Phu hop <-> Khong phu hop
+--------------------------------------------------------------------------------
+
+Trigger 1: Doi Linh Test sang "Khong phu hop" tren dashboard
+   -> Backend tu dong gui rejection mail + Lark IM
+   -> Dashboard cap nhat: "Da gui mail tu choi 21/05/2026 02:14"
+
+Trigger 2: Doi Linh Test sang "Phu hop" tren dashboard
+   -> Backend tu dong (detect transition, force=True):
+      - Gui invite mail moi
+      - Gui Lark IM
+   -> Dashboard cap nhat: "Da gui email PV cho ung vien 21/05/2026 02:XX"
+
+
+================================================================================
+KET QUA XAC NHAN
+================================================================================
+
+[1] Email gui toi ung vien - XAC NHAN OK
+   - Linh Test 1: 1 invite (CTO)
+   - Linh Test 2-6: 5 rejection (SEO Manager, Google Ads Lead, Account Manager,
+                                 Content SEO, Data Analyst Marketing)
+   - Linh Test 1: 1 rejection sau khi toggle
+   Tong: 7 email thuc te gui toi ngoclinhk47u1@gmail.com
+   Body HTML render dung (da fix bug base64)
+
+[2] Lark IM gui cho HRM - XAC NHAN OK
+   To: Nguyen Thi Ngoc Linh (oc_6818d2b1d43d009c86321f55f3224f7c)
+   7 tin nhan tuong ung 7 email
+
+[3] Lark Calendar event - XAC NHAN OK
+   Summary:  PV | Linh Test - CTO - Giam Doc Cong Nghe
    Start:    21/05/2026 10:30 (Asia/Ho_Chi_Minh)
    End:      21/05/2026 11:30
    Event ID: c38bea1f-f7bf-440e-942a-6e0e61da7921_0
 
-[4] HRM dashboard cột "Đã gửi Email" — XÁC NHẬN ✅
-   Query: GET /api/candidates → filter Linh Test
-   Response: {
-     "Email mời PV - Trạng thái": "sent",
-     "Email mời PV - Gửi lúc":   "20/05/2026 22:47",
-     "Email mời PV - Lỗi":       ""
-   }
-   Bằng chứng: outputs/hrm-dashboard-da-gui-email.png
+[4] HRM dashboard cot "Da gui Email" - XAC NHAN OK
+   Smart display theo timestamp gan nhat:
+   - Linh Test 1: "Da gui email PV cho ung vien" (sau toggle Phu hop lai)
+   - Linh Test 2-6: "Da gui mail tu choi"
+   - Cac ung vien khac: "-" hoac nut [Gui moi PV] / [Gui tu choi] tuy DK
 
-═══════════════════════════════════════════════════════════════════════════════
+
+================================================================================
 DEPLOYMENT STATUS
-═══════════════════════════════════════════════════════════════════════════════
+================================================================================
 
-▶ Backend (Cloud Run):
+Backend (Cloud Run):
 $ gcloud run deploy hrm-api --source . --region asia-southeast1
-   Service [hrm-api] revision [hrm-api-00054-dh8] is serving 100% traffic
+   Service [hrm-api] revision [hrm-api-00059-j8f] is serving 100% traffic
    URL: https://hrm-api-521103150103.asia-southeast1.run.app
 
-▶ Frontend (Cloudflare Pages):
+Frontend (Cloudflare Pages):
 $ wrangler pages deploy . --project-name=ngoclinhhrm --branch=main
-   ✨ Uploaded 1 files (1 already uploaded) (1.65 sec)
-   ✨ Deployment complete!
-   URL: https://ngoclinhhrm.com/tuyen-dung/
+   Uploaded -> https://ngoclinhhrm.com/tuyen-dung/
 
-═══════════════════════════════════════════════════════════════════════════════
-3 BUG ĐÃ FIX TRONG SESSION (nếu Thầy muốn xem)
-═══════════════════════════════════════════════════════════════════════════════
 
-Bug 1 — Refresh token expire sau 1 lần dùng (code 20038)
-  Nguyên nhân: Lark rotate refresh_token mỗi lần dùng, code cũ chỉ đọc env mà
-               không lưu lại token mới → lần tới luôn 20038.
-  Fix:         interview_invite_agent.py:148-160 — auto save vào .env.
+================================================================================
+4 BUG DA FIX TRONG SESSION
+================================================================================
 
-Bug 2 — Lark Mail không nhận tenant_access_token (code 99991663)
-  Nguyên nhân: Lark Mail Send API yêu cầu user_access_token (OAuth), không
-               chấp nhận tenant token kể cả khi đã có scope.
-  Fix:         Add scope `mail:user_mailbox.message:send` → Create Version
-               1.3.5 → Admin approve → re-authorize OAuth.
+Bug 1 - Refresh token expire sau 1 lan dung (code 20038)
+  Nguyen nhan: Lark rotate refresh_token moi lan dung, code cu chi doc env
+               ma khong luu lai token moi -> lan toi luon 20038.
+  Fix:         interview_invite_agent.py - auto save vao .env sau moi refresh.
 
-Bug 3 — Email body hiển thị base64 thay vì HTML
-  Nguyên nhân: Code base64 encode body_html trước khi gửi, nhưng Lark Mail API
-               KHÔNG decode base64 (khác Gmail API mà chúng tôi quen).
-  Fix:         interview_invite_agent.py:232 — bỏ base64.b64encode().
+Bug 2 - Lark Mail khong nhan tenant_access_token (code 99991663)
+  Nguyen nhan: Lark Mail Send API yeu cau user_access_token (OAuth), khong
+               chap nhan tenant token ke ca khi da co scope.
+  Fix:         Add scope `mail:user_mailbox.message:send` -> Create Version
+               1.3.5 -> Admin approve -> re-authorize OAuth.
+
+Bug 3 - Email body hien thi base64 thay vi HTML
+  Nguyen nhan: Code base64 encode body_html truoc khi gui, nhung Lark Mail API
+               KHONG decode base64 (khac Gmail API).
+  Fix:         Bo base64.b64encode().
+
+Bug 4 - Backend dung token cu trong Firestore (code 99991679)
+  Nguyen nhan: Backend Cloud Run load tu Firestore lark_tokens/tuyendung
+               (token cu chua bao gio sync). Local .env co token moi.
+  Fix:         Tao sync_lark_token.py de dong bo local -> Firestore.

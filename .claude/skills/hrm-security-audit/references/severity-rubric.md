@@ -28,7 +28,7 @@ Finding thuộc nhóm này nếu thoả MỘT trong:
 4. **Permission scope quá rộng:** app có scope mà use case không cần
 
 **Ví dụ thực tế:**
-- ⚠️ `X-API-Key: seongon-hrm-2024` plaintext trong SKILL.md (demo key, rate-limited)
+- ⚠️ `X-API-Key: ${HRM_API_KEY}` plaintext trong SKILL.md (demo key, rate-limited)
 - ⚠️ Output file có tên ứng viên thật + Link CV
 - ⚠️ Lark Bot có scope `mail:user_mailbox.message:send` trong khi chỉ cần gửi từ 1 mailgroup
 

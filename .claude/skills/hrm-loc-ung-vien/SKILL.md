@@ -20,7 +20,7 @@ Trigger khi user:
 ## 🌐 Endpoint HRM API
 
 **GET** `https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates`
-**Header:** `X-API-Key: seongon-hrm-2024`
+**Header:** `X-API-Key: ${HRM_API_KEY}`
 
 Response trả về toàn bộ candidates. Filter làm ở client-side (Python) để tối ưu.
 
@@ -50,7 +50,7 @@ Phân tích câu hỏi user, xác định 1 trong 4 loại lọc:
 
 ```bash
 curl -s "https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates" \
-  -H "X-API-Key: seongon-hrm-2024" > /tmp/candidates.json
+  -H "X-API-Key: ${HRM_API_KEY}" > /tmp/candidates.json
 ```
 
 ### Bước 4 — Filter + sort

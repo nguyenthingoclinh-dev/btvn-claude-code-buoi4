@@ -2,4 +2,4 @@
 # Append-only log mỗi lần skill được chạy
 # Format: <ISO timestamp> | <user> | <filter type> | <criteria> | <matches> | <output file>
 
-2026-05-26T09:32:18+07:00 | aiacademy@seongon.com | by-score | điểm AI ≥ 70, top 20 | 20 matches | output/loc-by-score-top20-2026-05-26.md
+2026-05-26T09:32:18+07:00 | aiacademy@seongon.com | by-score | điểm AI ≥ 70, top 20 | 20 matches | ../../../outputs/hrm-loc-ung-vien/loc-by-score-top20-2026-05-26.md

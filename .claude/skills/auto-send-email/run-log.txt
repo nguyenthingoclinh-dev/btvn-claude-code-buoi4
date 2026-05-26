@@ -2,6 +2,6 @@
 # Append-only log mỗi lần skill được chạy
 # Format: <ISO timestamp> | <user> | <template> | <recipient> | <result>
 
-2026-05-26T10:05:30+07:00 | aiacademy@seongon.com | invite_pv | ngoclinhk47u1@gmail.com (Linh Test 6) | dry-run rendered + saved template | output/test-send-mail-PV-2026-05-26.md
+2026-05-26T10:05:30+07:00 | aiacademy@seongon.com | invite_pv | ngoclinhk47u1@gmail.com (Linh Test 6) | dry-run rendered + saved template | ../../../outputs/auto-send-email/test-send-mail-PV-2026-05-26.md
 2026-05-21T09:30:00+07:00 | scheduler (Cloud Run) | invite_pv | (1 candidate) | sent ok via Lark Mail API | outputs/agent-run-log.txt
 2026-05-21T09:35:00+07:00 | scheduler (Cloud Run) | rejection | (5 candidates batch) | 5/5 sent ok | outputs/agent-run-log.txt

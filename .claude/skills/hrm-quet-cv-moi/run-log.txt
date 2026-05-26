@@ -2,5 +2,5 @@
 # Append-only log mỗi lần skill được chạy
 # Format: <ISO timestamp> | <user> | <params> | <result> | <output file>
 
-2026-05-26T09:30:42+07:00 | aiacademy@seongon.com | hours=168 | 7 CV trong tuần (1 mới, 2 duyệt, 4 từ chối) | output/quet-cv-moi-2026-05-26-0930.md
-2026-05-26T08:23:12+07:00 | aiacademy@seongon.com | hours=24 (POST scan-emails) | total=147 processed=15 skipped=75 errors=0 | +27 CV synced (91→118) | output/quet-cv-moi-2026-05-26-0835.md
+2026-05-26T09:30:42+07:00 | aiacademy@seongon.com | hours=168 | 7 CV trong tuần (1 mới, 2 duyệt, 4 từ chối) | ../../../outputs/hrm-quet-cv-moi/quet-cv-moi-2026-05-26-0930.md
+2026-05-26T08:23:12+07:00 | aiacademy@seongon.com | hours=24 (POST scan-emails) | total=147 processed=15 skipped=75 errors=0 | +27 CV synced (91→118) | ../../../outputs/hrm-quet-cv-moi/quet-cv-moi-2026-05-26-0835.md

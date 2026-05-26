@@ -6,7 +6,7 @@
 
 ```
 GET https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates
-Header: X-API-Key: seongon-hrm-2024
+Header: X-API-Key: ${HRM_API_KEY}
 ```
 
 Response schema:
@@ -58,7 +58,7 @@ Response schema:
 
 ```bash
 curl -s "https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates" \
-  -H "X-API-Key: seongon-hrm-2024" \
+  -H "X-API-Key: ${HRM_API_KEY}" \
   | python3 -c "import json,sys; d=json.load(sys.stdin); print('Total:', d['total']); print('First:', list(d['data'][0].keys())[:8])"
 ```
 

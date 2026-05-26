@@ -34,7 +34,7 @@
 
 ## 🟡 Medium (should fix)
 
-### M-1. API Key `seongon-hrm-2024` xuất hiện plaintext trong 6 file
+### M-1. API Key `${HRM_API_KEY}` xuất hiện plaintext trong 6 file
 
 ```
 .claude/agents/recruitment-agent.md
@@ -50,7 +50,7 @@
 **Action:**
 ```bash
 # Thay thế plaintext bằng env var reference
-sed -i '' 's/seongon-hrm-2024/${HRM_API_KEY}/g' .claude/skills/**/*.md
+sed -i '' 's/${HRM_API_KEY}/${HRM_API_KEY}/g' .claude/skills/**/*.md
 
 # Hoặc tách config vào file riêng
 .claude/skills/.env.example  # template

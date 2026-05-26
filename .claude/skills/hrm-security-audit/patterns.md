@@ -58,7 +58,7 @@ grep -rln -E "X-API-Key:\s*[a-zA-Z0-9_-]+|api[_-]key=[a-zA-Z0-9_-]{10,}" .claude
 
 **Severity:** 🟡 Medium (Critical nếu là production key)
 **Note phân biệt:**
-- Demo key (`seongon-hrm-2024` — rate-limited, scope hẹp): Medium
+- Demo key (`${HRM_API_KEY}` — rate-limited, scope hẹp): Medium
 - Production key: Critical
 
 ---

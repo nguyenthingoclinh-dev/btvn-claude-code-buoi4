@@ -62,15 +62,22 @@ btvn-claude-code-buoi4/
 │       ├── sync_lark_token.py             <- Sync token local -> Firestore
 │       ├── seed_test_candidates.py        <- Seed 5 ung vien test
 │       └── hrm-changes.diff               <- Diff db.py / app.py / index.html
-├── outputs/                               <- Output cap TASK LON (BTVN buoi 4)
+├── outputs/                               <- TAT CA output o root, KHONG nam trong .claude/skills/
+│   ├── README.md                          <- Huong dan folder outputs
 │   ├── demo-orchestration.md              <- Story: Claude Code phan bo task cho 2 agent
-│   ├── skill-usage-examples.md            <- 35+ skill invocations trong session
-│   ├── agent-run-log.txt                  <- Log Python scheduler chay tren Cloud Run
+│   ├── skill-usage-examples.md            <- 35+ skill invocations
 │   ├── agent-orchestration-2026-05-26.md  <- End-to-end flow ngay 26/05
-│   └── README.md
+│   ├── agent-run-log.txt                  <- Log Python scheduler tren Cloud Run
+│   ├── hrm-quet-cv-moi/                   <- Output cua skill nay
+│   ├── hrm-loc-ung-vien/
+│   ├── hrm-cap-nhat-ung-vien/
+│   ├── auto-send-email/
+│   ├── lark-calendar-pv/
+│   ├── lark-setup-bot/
+│   └── hrm-security-audit/
 │
-│   * Khac voi .claude/skills/<X>/output/  <- Output cap TUNG SKILL (audit trail)
-│     Root /outputs tra loi de bai. Per-skill /output chung minh skill chay that.
+│   * Theo nhan xet thay: .claude/skills/ CHI chua spec + template,
+│     KHONG chua output thuc te. Tat ca output > outputs/<skill-name>/
 ├── conv/
 │   ├── README.md                          <- Huong dan export chat history
 │   └── chat-history-clean.txt             <- Bien ban session da clean
@@ -114,13 +121,13 @@ btvn-claude-code-buoi4/
 
 | Agent | Skill | Output thật | Run-log | Lần chạy mới nhất | API endpoint |
 |---|---|---|---|---|---|
-| `recruitment-agent` | `hrm-quet-cv-moi` | [📄 0835.md](.claude/skills/hrm-quet-cv-moi/output/quet-cv-moi-2026-05-26-0835.md) | [📋 log](.claude/skills/hrm-quet-cv-moi/run-log.txt) | 2026-05-26 08:23 | `POST /api/scan-emails` |
-| `recruitment-agent` | `hrm-loc-ung-vien` | [📄 top20.md](.claude/skills/hrm-loc-ung-vien/output/loc-by-score-top20-2026-05-26.md) | [📋 log](.claude/skills/hrm-loc-ung-vien/run-log.txt) | 2026-05-26 09:32 | `GET /api/candidates` |
-| `recruitment-agent` | `hrm-cap-nhat-ung-vien` | [📄 patch.md](.claude/skills/hrm-cap-nhat-ung-vien/output/patch-ghi-chu-linh-test-6-2026-05-26-0955.md) | [📋 log](.claude/skills/hrm-cap-nhat-ung-vien/run-log.txt) | 2026-05-26 09:55 | `PATCH /api/candidates/{id}` |
-| `communication-agent` | `auto-send-email` | [📄 mail.md](.claude/skills/auto-send-email/output/test-send-mail-PV-2026-05-26.md) | [📋 log](.claude/skills/auto-send-email/run-log.txt) | 2026-05-26 10:05 | Lark Mail OpenAPI |
-| `communication-agent` | `lark-calendar-pv` | [📄 event.md](.claude/skills/lark-calendar-pv/output/test-create-event-2026-05-26.md) | [📋 log](.claude/skills/lark-calendar-pv/run-log.txt) | 2026-05-26 10:12 | Lark Calendar API |
-| `communication-agent` | `lark-setup-bot` | [📄 checklist.md](.claude/skills/lark-setup-bot/output/setup-bot-checklist-2026-05-26.md) | [📋 log](.claude/skills/lark-setup-bot/run-log.txt) | 2026-05-26 10:20 | Lark Developer Console |
-| `hrm-security-agent` *(mở rộng)* | `hrm-security-audit` | [📄 audit.md](.claude/skills/hrm-security-audit/output/security-audit-2026-05-26.md) | [📋 log](.claude/skills/hrm-security-audit/run-log.txt) | 2026-05-26 10:42 | grep + git ls-files |
+| `recruitment-agent` | `hrm-quet-cv-moi` | [📄 0835.md](outputs/hrm-quet-cv-moi/quet-cv-moi-2026-05-26-0835.md) | [📋 log](.claude/skills/hrm-quet-cv-moi/run-log.txt) | 2026-05-26 08:23 | `POST /api/scan-emails` |
+| `recruitment-agent` | `hrm-loc-ung-vien` | [📄 top20.md](outputs/hrm-loc-ung-vien/loc-by-score-top20-2026-05-26.md) | [📋 log](.claude/skills/hrm-loc-ung-vien/run-log.txt) | 2026-05-26 09:32 | `GET /api/candidates` |
+| `recruitment-agent` | `hrm-cap-nhat-ung-vien` | [📄 patch.md](outputs/hrm-cap-nhat-ung-vien/patch-ghi-chu-linh-test-6-2026-05-26-0955.md) | [📋 log](.claude/skills/hrm-cap-nhat-ung-vien/run-log.txt) | 2026-05-26 09:55 | `PATCH /api/candidates/{id}` |
+| `communication-agent` | `auto-send-email` | [📄 mail.md](outputs/auto-send-email/test-send-mail-PV-2026-05-26.md) | [📋 log](.claude/skills/auto-send-email/run-log.txt) | 2026-05-26 10:05 | Lark Mail OpenAPI |
+| `communication-agent` | `lark-calendar-pv` | [📄 event.md](outputs/lark-calendar-pv/test-create-event-2026-05-26.md) | [📋 log](.claude/skills/lark-calendar-pv/run-log.txt) | 2026-05-26 10:12 | Lark Calendar API |
+| `communication-agent` | `lark-setup-bot` | [📄 checklist.md](outputs/lark-setup-bot/setup-bot-checklist-2026-05-26.md) | [📋 log](.claude/skills/lark-setup-bot/run-log.txt) | 2026-05-26 10:20 | Lark Developer Console |
+| `hrm-security-agent` *(mở rộng)* | `hrm-security-audit` | [📄 audit.md](outputs/hrm-security-audit/security-audit-2026-05-26.md) | [📋 log](.claude/skills/hrm-security-audit/run-log.txt) | 2026-05-26 10:42 | grep + git ls-files |
 | `hrm-security-agent` *(mở rộng)* | `lark-setup-bot` | (reuse) | (reuse) | (reuse) | (audit Lark scope) |
 
 📊 **End-to-end flow:** [outputs/agent-orchestration-2026-05-26.md](outputs/agent-orchestration-2026-05-26.md) — ghi lại đầy đủ orchestration giữa 2 agent qua 5 skill, có sequence diagram và số liệu thật ngày 26/05.

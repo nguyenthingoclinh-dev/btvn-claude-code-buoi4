@@ -1,17 +1,31 @@
-# Chat history voi Claude Code
+# Chat history với Claude Code
 
-## 2 file de Thay cham
+## 3 loại file để Thầy chấm
 
-| File | Mo ta | Dung de |
-|------|-------|---------|
-| [`chat-export.txt`](./chat-export.txt) | **REAL `/export` output tu Claude Code CLI** (117 KB). Co box-drawing header chuan, ky tu `❯` cho user prompt, `⏺` cho Claude response. | Dap ung yeu cau BTVN: "File ghi chep lai lich su tro chuyen voi Claude Code /export" |
-| [`chat-history-clean.txt`](./chat-history-clean.txt) | Bien ban session da clean (plain text, khong icon, tom tat theo 11 giai doan logic) | Cho Thay doc nhanh hieu flow tong the |
+| File | Loại | Mô tả |
+|------|------|-------|
+| [`chat-export.txt`](./chat-export.txt) | XÂY agent | **REAL `/export` output từ Claude Code CLI** (117 KB). Ghi lại quá trình xây 2 agent + 6 skill (21/05/2026). |
+| [`chat-history-clean.txt`](./chat-history-clean.txt) | XÂY agent (đã clean) | Bản clean của session xây, dễ đọc tổng quan flow 11 giai đoạn. |
+| [`chat-export-chay-agent-2026-05-26.txt`](./chat-export-chay-agent-2026-05-26.txt) | **CHẠY agent** (TODO) | Cần thêm — `/export` session chạy 5 skill thật ngày 26/05 (scan email +27 CV, lọc top 20, PATCH Linh Test 6, etc.) |
 
-## Cach tao file chat-export.txt
+## 📌 Theo feedback của thầy
 
-Chay trong terminal:
+> *"Có 1 file lịch sử được /export đúng và chứa thông tin quá trình **xây** agent, chưa có lịch sử cho phần **chạy** agent"*
+
+→ Cần `/export` thêm session CHẠY (ngày 26/05) để cover:
+- POST `/api/scan-emails?hours=24` → +27 CV
+- GET `/api/candidates` + filter top 20 điểm AI
+- PATCH `/api/candidates/8a0d0844` → ok:true
+- hrm-security-agent chạy `hrm-security-audit` skill
+
+## Cách tạo file chat-export.txt
+
 ```bash
 cd "/Users/Ngoclinh/Desktop/Lark Bot"
-claude --resume e337a42b-c26d-4e00-a576-c93d040f9647
+claude --resume <session-id>
 ```
-Trong session resume, go `/export` -> chon path luu file.
+
+Trong session resume, gõ `/export` → chọn path lưu file.
+
+Session ID xây agent: `e337a42b-c26d-4e00-a576-c93d040f9647`
+Session ID chạy agent ngày 26/05: (Sếp lấy từ terminal hiện tại — Cmd+Shift+P hoặc `claude --list-sessions`)

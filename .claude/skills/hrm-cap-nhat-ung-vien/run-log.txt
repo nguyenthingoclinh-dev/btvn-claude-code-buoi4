@@ -2,4 +2,4 @@
 # Append-only log mỗi lần skill được chạy
 # Format: <ISO timestamp> | <user> | <method> | <candidate_id> | <fields updated> | <result>
 
-2026-05-26T09:55:12+07:00 | aiacademy@seongon.com | PATCH /api/candidates/8a0d0844 | Linh Test 6 - Data Analyst | ghi_chu_ai | ok:true | output/patch-ghi-chu-linh-test-6-2026-05-26-0955.md
+2026-05-26T09:55:12+07:00 | aiacademy@seongon.com | PATCH /api/candidates/8a0d0844 | Linh Test 6 - Data Analyst | ghi_chu_ai | ok:true | ../../../outputs/hrm-cap-nhat-ung-vien/patch-ghi-chu-linh-test-6-2026-05-26-0955.md

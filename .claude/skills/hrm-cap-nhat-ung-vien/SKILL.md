@@ -28,7 +28,7 @@ Trigger khi user:
 | `/api/candidates/{id}/send-lark` | POST | Gửi candidate vào Lark chat |
 
 **Base:** `https://hrm-api-521103150103.asia-southeast1.run.app`
-**Header:** `X-API-Key: seongon-hrm-2024`
+**Header:** `X-API-Key: ${HRM_API_KEY}`
 
 ## 📋 Quy trình 6 bước
 
@@ -51,7 +51,7 @@ Nếu user gọi tên ứng viên (không phải ID):
 
 ```bash
 curl -s "https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates" \
-  -H "X-API-Key: seongon-hrm-2024" \
+  -H "X-API-Key: ${HRM_API_KEY}" \
   | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
@@ -83,7 +83,7 @@ PATCH 1 hoặc nhiều fields cùng lúc:
 ```bash
 curl -X PATCH "https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates/{ID}" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: seongon-hrm-2024" \
+  -H "X-API-Key: ${HRM_API_KEY}" \
   -d '{
     "trang_thai": "Phỏng vấn chuyên môn",
     "tinh_trang": "Phù hợp",
@@ -94,7 +94,7 @@ curl -X PATCH "https://hrm-api-521103150103.asia-southeast1.run.app/api/candidat
 DELETE candidate:
 ```bash
 curl -X DELETE "https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates/{ID}" \
-  -H "X-API-Key: seongon-hrm-2024"
+  -H "X-API-Key: ${HRM_API_KEY}"
 ```
 
 ### Bước 5 — Confirm thành công

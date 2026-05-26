@@ -2,5 +2,5 @@
 # Append-only log mỗi lần skill được chạy
 # Format: <ISO timestamp> | <user> | <mode> | <bot> | <result>
 
-2026-05-26T10:20:00+07:00 | communication-agent | setup-audit | HR SEONGON Bot (cli_a97b4c1583f8ded1) | 9/10 checklist items ✅ — production ready | output/setup-bot-checklist-2026-05-26.md
-2026-05-26T10:48:33+07:00 | hrm-security-agent | security-audit | HR SEONGON Bot (cli_a97b4c1583f8ded1) | 2 Medium, 1 Low — PASS | output/security-audit-lark-bot-2026-05-26.md
+2026-05-26T10:20:00+07:00 | communication-agent | setup-audit | HR SEONGON Bot (cli_a97b4c1583f8ded1) | 9/10 checklist items ✅ — production ready | ../../../outputs/lark-setup-bot/setup-bot-checklist-2026-05-26.md
+2026-05-26T10:48:33+07:00 | hrm-security-agent | security-audit | HR SEONGON Bot (cli_a97b4c1583f8ded1) | 2 Medium, 1 Low — PASS | ../../../outputs/lark-setup-bot/security-audit-lark-bot-2026-05-26.md

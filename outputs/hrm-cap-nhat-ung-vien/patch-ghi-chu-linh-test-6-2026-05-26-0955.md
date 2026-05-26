@@ -16,7 +16,7 @@
 
 ```bash
 curl -X PATCH "https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates/8a0d0844" \
-  -H "X-API-Key: seongon-hrm-2024" \
+  -H "X-API-Key: ${HRM_API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{"ghi_chu_ai":"Skill hrm-cap-nhat-ung-vien test run 2026-05-26 09:55 — auto-add note via BTVN-buoi4 skill demo"}'
 ```

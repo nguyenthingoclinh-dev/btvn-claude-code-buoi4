@@ -25,7 +25,7 @@ Trigger khi user:
 | `/api/candidates` | GET | Lấy danh sách ứng viên (để tổng kết) |
 
 **Base URL:** `https://hrm-api-521103150103.asia-southeast1.run.app`
-**Header:** `X-API-Key: seongon-hrm-2024`
+**Header:** `X-API-Key: ${HRM_API_KEY}`
 
 ## 📋 Quy trình 5 bước
 
@@ -44,7 +44,7 @@ Mapping mặc định:
 ```bash
 HOURS=72  # thay theo input user
 curl -s -X POST "https://hrm-api-521103150103.asia-southeast1.run.app/api/scan-emails?hours=${HOURS}" \
-  -H "X-API-Key: seongon-hrm-2024"
+  -H "X-API-Key: ${HRM_API_KEY}"
 ```
 
 Kết quả mong đợi: `{"status":"started", ...}` hoặc `{"status":"already_running", ...}`
@@ -53,7 +53,7 @@ Kết quả mong đợi: `{"status":"started", ...}` hoặc `{"status":"already_
 
 ```bash
 until STATUS=$(curl -s "https://hrm-api-521103150103.asia-southeast1.run.app/api/scan-status" \
-  -H "X-API-Key: seongon-hrm-2024") && echo "$STATUS" | grep -q "finished_at" && \
+  -H "X-API-Key: ${HRM_API_KEY}") && echo "$STATUS" | grep -q "finished_at" && \
   ! echo "$STATUS" | grep -q '"finished_at":null'; do
   echo "$STATUS" | python3 -c "..."  # hiển thị progress
   sleep 10
@@ -66,7 +66,7 @@ Hiển thị progress cho user: `⏳ Đang quét: {processed} mới / {total_ema
 
 ```bash
 curl -s "https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates" \
-  -H "X-API-Key: seongon-hrm-2024"
+  -H "X-API-Key: ${HRM_API_KEY}"
 ```
 
 Parse JSON, lọc:
@@ -108,7 +108,7 @@ Format:
 | `already_running` | Có scan khác đang chạy | Poll status, không trigger lại — đợi xong |
 | Token Lark hết hạn | User token expire sau 2h | Báo user re-OAuth tại `/auth/lark` (cần làm thủ công) |
 | Scan rất lâu (>5 phút) | Nhiều email + Claude AI chậm | Đó là bình thường, không restart — kiểm tra logs |
-| API trả 401 | Sai X-API-Key | Đảm bảo header `X-API-Key: seongon-hrm-2024` |
+| API trả 401 | Sai X-API-Key | Đảm bảo header `X-API-Key: ${HRM_API_KEY}` |
 | Polling vô tận | Network drop | Set timeout tổng tối đa 15 phút (90 lần × 10s) |
 | Báo cáo sai số liệu | Đọc nhầm field name | Field chuẩn: `total_emails`, `processed`, `skipped`, `errors` |
 

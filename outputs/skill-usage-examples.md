@@ -186,7 +186,7 @@ Match: 5 (Linh Test 2, 3, 4, 5, 6 — sau khi Sếp đổi sang "Không phù h�
 
 ```bash
 PATCH https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates/5953c667
-Headers: X-API-Key: seongon-hrm-2024
+Headers: X-API-Key: ${HRM_API_KEY}
 Body: {
   "email_invite_status": "sent",
   "email_invite_sent_at": "20/05/2026 22:47",

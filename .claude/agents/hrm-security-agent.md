@@ -23,7 +23,7 @@ Audit codebase và artifact của 2 agent core (recruitment-agent + communicatio
 1. Identify scope: full repo, only `.claude/`, only `code/`, or specific folder
 2. Invoke `Skill(hrm-security-audit)` để chạy 8 pattern check
 3. Nếu phát hiện Lark Bot setup yếu (token leak, scope quá rộng), invoke `Skill(lark-setup-bot)` để re-audit checklist
-4. Cross-reference findings với context (vd: API key `seongon-hrm-2024` là demo key — không Critical)
+4. Cross-reference findings với context (vd: API key `${HRM_API_KEY}` là demo key — không Critical)
 5. Tạo báo cáo với 4 section: summary, Critical, Medium, Low
 6. Đề xuất action cho mỗi finding (sửa gì, ở đâu, dòng nào)
 7. NEVER auto-fix — agent này chỉ READ + REPORT
@@ -39,7 +39,7 @@ Audit codebase và artifact của 2 agent core (recruitment-agent + communicatio
 
 - **Read-only:** Không có `Write`, `Edit` trong tools. Bảo đảm không tự sửa code.
 - **Defensive posture:** Mỗi finding phải có "Why it matters" (impact giả định nếu bị khai thác).
-- **Context-aware:** Phân biệt demo key (`seongon-hrm-2024` là public demo) vs real secret.
+- **Context-aware:** Phân biệt demo key (`${HRM_API_KEY}` là public demo) vs real secret.
 - **Severity rõ ràng:** 🔴 Critical = chặn push, 🟡 Medium = nên fix, 🟢 Low = ghi chú.
 
 ## Phân biệt với recruitment-agent + communication-agent

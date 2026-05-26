@@ -42,7 +42,7 @@ NOTIFY_EMAIL   = os.getenv("CV_NOTIFY_EMAIL", "")
 
 HRM_API_BASE = "https://hrm-api-521103150103.asia-southeast1.run.app/api/candidates"
 HRM_API = HRM_API_BASE  # backward compat
-HRM_KEY = "seongon-hrm-2024"
+HRM_KEY = "${HRM_API_KEY}"
 
 # ─── HRM field names (key trả về từ GET /api/candidates) ────────────────────
 F_ID       = "ID"

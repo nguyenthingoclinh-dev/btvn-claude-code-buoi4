@@ -1,0 +1,5 @@
+# run-log.txt — hrm-quet-cv-moi
+# Append-only log mỗi lần skill được chạy
+# Format: <ISO timestamp> | <user> | <params> | <result> | <output file>
+
+2026-05-26T09:30:42+07:00 | aiacademy@seongon.com | hours=168 | 7 CV trong tuần (1 mới, 2 duyệt, 4 từ chối) | output/quet-cv-moi-2026-05-26-0930.md

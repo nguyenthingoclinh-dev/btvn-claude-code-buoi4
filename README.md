@@ -33,16 +33,18 @@ Hoàn thành 100% end-to-end. Claude Code chính tự phân bổ cho 2 sub-agent
 btvn-claude-code-buoi4/
 ├── README.md                              <- bạn đang đọc
 ├── .claude/
-│   ├── agents/                            <- 2 sub-agents
-│   │   ├── recruitment-agent.md
-│   │   └── communication-agent.md
-│   └── skills/                            <- 6 skills (>=2 mỗi agent)
+│   ├── agents/                            <- 3 sub-agents (2 core + 1 mo rong)
+│   │   ├── recruitment-agent.md           <- Core
+│   │   ├── communication-agent.md         <- Core
+│   │   └── hrm-security-agent.md          <- Mo rong: audit bao mat
+│   └── skills/                            <- 7 skills (>=2 moi agent)
 │       ├── auto-send-email/               <- Lark Mail OpenAPI + 4 templates
 │       ├── lark-setup-bot/                <- Lark IM bot setup
 │       ├── lark-calendar-pv/              <- Lark Calendar event PV
 │       ├── hrm-quet-cv-moi/               <- Scan email -> CV
 │       ├── hrm-loc-ung-vien/              <- Loc ung vien da tieu chi
-│       └── hrm-cap-nhat-ung-vien/         <- PATCH HRM API
+│       ├── hrm-cap-nhat-ung-vien/         <- PATCH HRM API
+│       └── hrm-security-audit/            <- 8-pattern security scan
 ├── code/                                  <- Source code agent xay trong session
 │   ├── interview_invite_agent.py          <- Agent #1 - moi PV
 │   ├── interview_scheduler.py             <- Cron Agent #1
@@ -98,6 +100,14 @@ btvn-claude-code-buoi4/
 | [`lark-setup-bot`](.claude/skills/lark-setup-bot/SKILL.md) | Setup Lark Bot + gửi IM text/card |
 | [`lark-calendar-pv`](.claude/skills/lark-calendar-pv/SKILL.md) | Tạo Lark Calendar event PV, mời attendees |
 
+### 3. `hrm-security-agent` *(agent mở rộng)*
+> Chuyên gia audit bảo mật workspace HRM — read-only, chạy định kỳ hoặc trước khi push code public.
+
+| Skill sử dụng | Mục đích |
+|---------------|----------|
+| [`hrm-security-audit`](.claude/skills/hrm-security-audit/SKILL.md) | 8-pattern scan: hardcoded secrets, .env leak, API key plaintext, PII trong output, Bearer token weakness, gitignore audit |
+| [`lark-setup-bot`](.claude/skills/lark-setup-bot/SKILL.md) | Re-audit Lark Bot scope + token rotation khi nghi ngờ leak |
+
 ---
 
 ## Matrix Agent ↔ Skill ↔ Bằng chứng thực thi
@@ -110,6 +120,8 @@ btvn-claude-code-buoi4/
 | `communication-agent` | `auto-send-email` | [📄 mail.md](.claude/skills/auto-send-email/output/test-send-mail-PV-2026-05-26.md) | [📋 log](.claude/skills/auto-send-email/run-log.txt) | 2026-05-26 10:05 | Lark Mail OpenAPI |
 | `communication-agent` | `lark-calendar-pv` | [📄 event.md](.claude/skills/lark-calendar-pv/output/test-create-event-2026-05-26.md) | [📋 log](.claude/skills/lark-calendar-pv/run-log.txt) | 2026-05-26 10:12 | Lark Calendar API |
 | `communication-agent` | `lark-setup-bot` | [📄 checklist.md](.claude/skills/lark-setup-bot/output/setup-bot-checklist-2026-05-26.md) | [📋 log](.claude/skills/lark-setup-bot/run-log.txt) | 2026-05-26 10:20 | Lark Developer Console |
+| `hrm-security-agent` *(mở rộng)* | `hrm-security-audit` | [📄 audit.md](.claude/skills/hrm-security-audit/output/security-audit-2026-05-26.md) | [📋 log](.claude/skills/hrm-security-audit/run-log.txt) | 2026-05-26 10:42 | grep + git ls-files |
+| `hrm-security-agent` *(mở rộng)* | `lark-setup-bot` | (reuse) | (reuse) | (reuse) | (audit Lark scope) |
 
 📊 **End-to-end flow:** [outputs/agent-orchestration-2026-05-26.md](outputs/agent-orchestration-2026-05-26.md) — ghi lại đầy đủ orchestration giữa 2 agent qua 5 skill, có sequence diagram và số liệu thật ngày 26/05.
 

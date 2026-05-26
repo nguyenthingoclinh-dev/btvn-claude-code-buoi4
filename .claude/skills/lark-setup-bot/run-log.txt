@@ -1,0 +1,5 @@
+# run-log.txt — lark-setup-bot
+# Append-only log mỗi lần skill được chạy
+# Format: <ISO timestamp> | <user> | <mode> | <bot> | <result>
+
+2026-05-26T10:20:00+07:00 | aiacademy@seongon.com | audit | HR SEONGON Bot (cli_a97b4c1583f8ded1) | 9/10 checklist items ✅ — production ready | output/setup-bot-checklist-2026-05-26.md

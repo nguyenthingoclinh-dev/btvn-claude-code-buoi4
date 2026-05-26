@@ -1,0 +1,6 @@
+# run-log.txt — lark-calendar-pv
+# Append-only log mỗi lần skill được chạy
+# Format: <ISO timestamp> | <user> | <candidate_id> | <interview_time> | <result>
+
+2026-05-26T10:12:45+07:00 | aiacademy@seongon.com | 8a0d0844 (Linh Test 6) | 2026-05-28T14:00+07 | dry-run + integration plan validated | output/test-create-event-2026-05-26.md
+2026-05-21T09:30:00+07:00 | scheduler (Cloud Run) | (1 candidate) | (1 PV) | created ok + email sent + HRM updated | outputs/agent-run-log.txt

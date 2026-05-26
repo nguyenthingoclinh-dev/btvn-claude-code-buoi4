@@ -94,6 +94,21 @@ btvn-claude-code-buoi4/
 
 ---
 
+## Matrix Agent ↔ Skill ↔ Bằng chứng thực thi
+
+| Agent | Skill | Output thật | Run-log | Lần chạy mới nhất | API endpoint |
+|---|---|---|---|---|---|
+| `recruitment-agent` | `hrm-quet-cv-moi` | [📄 0835.md](.claude/skills/hrm-quet-cv-moi/output/quet-cv-moi-2026-05-26-0835.md) | [📋 log](.claude/skills/hrm-quet-cv-moi/run-log.txt) | 2026-05-26 08:23 | `POST /api/scan-emails` |
+| `recruitment-agent` | `hrm-loc-ung-vien` | [📄 top20.md](.claude/skills/hrm-loc-ung-vien/output/loc-by-score-top20-2026-05-26.md) | [📋 log](.claude/skills/hrm-loc-ung-vien/run-log.txt) | 2026-05-26 09:32 | `GET /api/candidates` |
+| `recruitment-agent` | `hrm-cap-nhat-ung-vien` | [📄 patch.md](.claude/skills/hrm-cap-nhat-ung-vien/output/patch-ghi-chu-linh-test-6-2026-05-26-0955.md) | [📋 log](.claude/skills/hrm-cap-nhat-ung-vien/run-log.txt) | 2026-05-26 09:55 | `PATCH /api/candidates/{id}` |
+| `communication-agent` | `auto-send-email` | [📄 mail.md](.claude/skills/auto-send-email/output/test-send-mail-PV-2026-05-26.md) | [📋 log](.claude/skills/auto-send-email/run-log.txt) | 2026-05-26 10:05 | Lark Mail OpenAPI |
+| `communication-agent` | `lark-calendar-pv` | [📄 event.md](.claude/skills/lark-calendar-pv/output/test-create-event-2026-05-26.md) | [📋 log](.claude/skills/lark-calendar-pv/run-log.txt) | 2026-05-26 10:12 | Lark Calendar API |
+| `communication-agent` | `lark-setup-bot` | [📄 checklist.md](.claude/skills/lark-setup-bot/output/setup-bot-checklist-2026-05-26.md) | [📋 log](.claude/skills/lark-setup-bot/run-log.txt) | 2026-05-26 10:20 | Lark Developer Console |
+
+📊 **End-to-end flow:** [outputs/agent-orchestration-2026-05-26.md](outputs/agent-orchestration-2026-05-26.md) — ghi lại đầy đủ orchestration giữa 2 agent qua 5 skill, có sequence diagram và số liệu thật ngày 26/05.
+
+---
+
 ## Cách Claude Code phân bổ task
 
 ```

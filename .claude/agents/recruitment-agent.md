@@ -1,7 +1,7 @@
 ---
 name: recruitment-agent
 description: HRM SEONGON candidate pipeline specialist. Reads, filters, and updates candidate records via REST API at hrm-api-521103150103.asia-southeast1.run.app. Use proactively when user mentions "ứng viên", "CV", "pipeline tuyển dụng", "lọc ứng viên", "đổi trạng thái", "PATCH HRM", or needs any candidate data operation on ngoclinhhrm.com/tuyen-dung dashboard.
-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch
+tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, Skill(hrm-quet-cv-moi), Skill(hrm-loc-ung-vien), Skill(hrm-cap-nhat-ung-vien)
 color: green
 ---
 

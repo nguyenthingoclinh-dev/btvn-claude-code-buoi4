@@ -1,7 +1,7 @@
 ---
 name: communication-agent
 description: Recruitment communication specialist for SEONGON — sends email from tuyendung@seongon.com via Lark Mail OpenAPI, posts Lark IM notifications to HRM, creates Lark Calendar events for interview slots. Use proactively when user mentions "gửi email", "thư mời PV", "thư từ chối", "thư trúng tuyển", "báo Lark", "đặt lịch PV", "schedule interview", or any candidate-facing communication.
-tools: Bash, Read, Edit, Write, WebFetch
+tools: Bash, Read, Edit, Write, WebFetch, Skill(auto-send-email), Skill(lark-calendar-pv), Skill(lark-setup-bot)
 color: green
 ---
 

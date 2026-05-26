@@ -60,9 +60,15 @@ btvn-claude-code-buoi4/
 │       ├── sync_lark_token.py             <- Sync token local -> Firestore
 │       ├── seed_test_candidates.py        <- Seed 5 ung vien test
 │       └── hrm-changes.diff               <- Diff db.py / app.py / index.html
-├── outputs/                               <- Ket qua chay that
-│   ├── agent-run-log.txt                  <- Log ca 2 agent gui thanh cong
+├── outputs/                               <- Output cap TASK LON (BTVN buoi 4)
+│   ├── demo-orchestration.md              <- Story: Claude Code phan bo task cho 2 agent
+│   ├── skill-usage-examples.md            <- 35+ skill invocations trong session
+│   ├── agent-run-log.txt                  <- Log Python scheduler chay tren Cloud Run
+│   ├── agent-orchestration-2026-05-26.md  <- End-to-end flow ngay 26/05
 │   └── README.md
+│
+│   * Khac voi .claude/skills/<X>/output/  <- Output cap TUNG SKILL (audit trail)
+│     Root /outputs tra loi de bai. Per-skill /output chung minh skill chay that.
 ├── conv/
 │   ├── README.md                          <- Huong dan export chat history
 │   └── chat-history-clean.txt             <- Bien ban session da clean

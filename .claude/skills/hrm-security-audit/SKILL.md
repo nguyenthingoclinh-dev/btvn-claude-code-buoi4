@@ -16,18 +16,22 @@ Trigger khi user:
 - "Security review trước khi public repo"
 - "Có file nào chứa token không?"
 
-## 🔍 Các loại lỗ hổng skill này phát hiện
+## 🔍 Các loại lỗ hổng skill này phát hiện (overview)
 
-| # | Pattern | Severity | Cách phát hiện |
-|---|---|---|---|
-| 1 | Hardcoded API key/secret/token | 🔴 Critical | regex `(api[_-]?key\|secret\|password\|token)\s*=\s*['"][A-Za-z0-9_-]{8,}` |
-| 2 | `.env` bị commit | 🔴 Critical | check `git ls-files \| grep '\.env$'` |
-| 3 | Private key/cert leak | 🔴 Critical | tìm `*.pem`, `*.key`, `service_account*.json` đã track |
-| 4 | API key trong markdown public | 🟡 Medium | grep `X-API-Key:` trong .md |
-| 5 | Bearer token hardcoded | 🟡 Medium | regex `Bearer [A-Za-z0-9._-]{20,}` |
-| 6 | PII ứng viên trong output (email, SĐT, CV link) | 🟡 Medium | scan output files |
-| 7 | `.gitignore` thiếu entry quan trọng | 🟢 Low | check `.env`, `*.pem`, `*.key`, `__pycache__/` |
-| 8 | Hardcoded production URL (rủi ro lock-in) | 🟢 Low | đếm số lần xuất hiện base URL |
+| # | Pattern | Severity |
+|---|---|---|
+| 1 | Hardcoded API key/secret/token | 🔴 Critical |
+| 2 | `.env` bị commit | 🔴 Critical |
+| 3 | Private key/cert leak | 🔴 Critical |
+| 4 | API key trong markdown public | 🟡 Medium |
+| 5 | Bearer token hardcoded | 🟡 Medium |
+| 6 | PII ứng viên trong output | 🟡 Medium |
+| 7 | `.gitignore` thiếu entry | 🟢 Low |
+| 8 | Hardcoded production URL | 🟢 Low |
+
+**Chi tiết regex + edge case từng pattern:** load file [`patterns.md`](patterns.md) **chỉ khi cần verify 1 pattern cụ thể** — không load mặc định (progressive disclosure).
+
+**Khi finding nằm biên giới 2 severity:** load file [`references/severity-rubric.md`](references/severity-rubric.md) để quyết định.
 
 ## 📋 Quy trình 5 bước
 
